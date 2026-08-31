@@ -2,6 +2,7 @@
 
 #include <cstdio>
 
+#include "ble_scan.h"
 #include "hal.h"
 #include "wifi_scan.h"
 
@@ -50,7 +51,7 @@ Screen* makeRootMenu() {
                   }),
           submenu("Bluetooth",
                   {
-                      stub("BLE Scan"),
+                      {"BLE Scan", [] { ui.push(new BleScanScreen()); }},
                       stub("Advertisement Decode"),
                       stub("Spam Detect"),
                       stub("BLE HID"),
