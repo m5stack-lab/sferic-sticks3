@@ -53,6 +53,16 @@ void Registry::setEnabled(const std::string& id, bool on) {
   save();
 }
 
+RunResult Registry::run(const std::string& id, const std::string& params) const {
+  for (const auto& t : tools_) {
+    if (t.id != id) continue;
+    if (!enabled(id)) return {RunOutcome::Disabled, "capability_disabled"};
+    if (!t.run) return {RunOutcome::NoHeadlessPath, "device_only"};
+    return {RunOutcome::Ok, t.run(params)};
+  }
+  return {RunOutcome::NotFound, "capability_not_present"};
+}
+
 std::vector<std::string> Registry::toolsets() const {
   std::vector<std::string> out;
   for (const auto& t : tools_) {

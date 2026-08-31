@@ -55,7 +55,8 @@ void sendTools() {
     j += "{\"id\":\"" + jsonEscape(t.id) + "\",\"name\":\"" +
          jsonEscape(t.name) + "\",\"toolset\":\"" + jsonEscape(t.toolset) +
          "\",\"summary\":\"" + jsonEscape(t.summary) + "\",\"enabled\":" +
-         (registry.enabled(t.id) ? "true" : "false") + "}";
+         (registry.enabled(t.id) ? "true" : "false") +
+         ",\"has_run\":" + (t.run ? "true" : "false") + "}";
   }
   j += "]";
   g_web->send(200, "application/json", j);
@@ -67,6 +68,35 @@ void setTool() {
     registry.setEnabled(g_web->arg("id").c_str(), g_web->arg("on") == "1");
   }
   g_web->send(200, "application/json", "{\"ok\":true}");
+}
+
+// GET /api/tools/run?id=<id>[&p=<params>] — the headless launch path
+// (ADR-0004 §4). Same dispatch the MCP server will use. The tool returns a
+// JSON object; we wrap it in an envelope. Non-Ok outcomes carry the reason
+// code from Registry::run and an HTTP status to match.
+void runTool() {
+  ++g_reqs;
+  if (!g_web->hasArg("id")) {
+    g_web->send(400, "application/json", "{\"ok\":false,\"error\":\"missing_id\"}");
+    return;
+  }
+  const std::string id = g_web->arg("id").c_str();
+  const std::string params = g_web->hasArg("p") ? g_web->arg("p").c_str() : "";
+  const RunResult r = registry.run(id, params);
+
+  if (r.outcome == RunOutcome::Ok) {
+    String j = "{\"id\":\"" + jsonEscape(id) + "\",\"ok\":true,\"result\":" +
+               String(r.body.c_str()) + "}";
+    g_web->send(200, "application/json", j);
+    return;
+  }
+  int code = 500;
+  if (r.outcome == RunOutcome::NotFound) code = 404;
+  else if (r.outcome == RunOutcome::Disabled) code = 409;
+  else if (r.outcome == RunOutcome::NoHeadlessPath) code = 501;
+  String j = "{\"id\":\"" + jsonEscape(id) + "\",\"ok\":false,\"error\":\"" +
+             jsonEscape(r.body) + "\"}";
+  g_web->send(code, "application/json", j);
 }
 
 void sendPcap() {
@@ -98,6 +128,7 @@ void WebUiScreen::onEnter() {
   g_web->on("/api/status", sendStatus);
   g_web->on("/api/tools", sendTools);
   g_web->on("/api/tools/set", HTTP_POST, setTool);
+  g_web->on("/api/tools/run", runTool);
   g_web->on("/api/capture.pcap", sendPcap);
   g_web->onNotFound(sendIndex);  // captive
   g_web->begin();

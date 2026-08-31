@@ -44,7 +44,7 @@ Tools that emit IR / RF / keystrokes (TV-B-Gone, IR Replay, BLE/USB HID) are
 | **Infrared** | Learn / Replay · TV-B-Gone (~39 codes) · Protocol Decode |
 | **Sensors** | Motion / Tamper · Mic Spectrum · Gesture |
 | **USB** *(sferic-usbhid only)* | HID Keyboard |
-| **Settings** | Tools (enable/disable, persisted) · Capture (pcap buffer) · Web UI · About |
+| **Settings** | Tools (enable/disable, persisted) · Display (sleep timeout + brightness) · Capture (pcap buffer) · Web UI · About |
 
 Each tool is a `registry.add({...})` line in `src/menu_tree.cpp` plus a
 `Screen`; the menu is generated from the registry, filtered by the
@@ -58,6 +58,11 @@ replay / decode / scan, no untargeted-DoS headline features.
 a one-page dashboard: tool enable/disable, live status, and a
 `capture.pcap` download. It is the exclusive WiFi user while up — WiFi tools
 pause. ([ADR-0006](docs/adr/0006-web-ui.md))
+
+`GET /api/tools/run?id=<tool-id>` is the headless launch path — the same
+`Registry::run` dispatch the MCP server will use. Only non-radio tools
+(`sensors.motion`, `sensors.gesture`) expose it on the station for now;
+`/api/tools` reports `has_run` per tool. ([`docs/mcp/headless.md`](docs/mcp/headless.md))
 
 ## Captures
 
@@ -84,6 +89,7 @@ docs/mcp/        per-toolset MCP contracts + strike/pcap formats
 
 ## Status
 
-StickS3 firmware + local web UI. Not built yet: the MCP server (Pi 5
-collector), the headless `run()` path (so web/MCP can *launch* tools, not
-just configure), RF Pack S3 drivers (SubGHz / nRF24 — waiting on hardware).
+StickS3 firmware + local web UI, with screen sleep and the headless
+`run()` seam in place (sensors only so far — radio tools get their headless
+path on the collector). Not built yet: the MCP server (Pi 5 collector),
+RF Pack S3 drivers (SubGHz / nRF24 — waiting on hardware).

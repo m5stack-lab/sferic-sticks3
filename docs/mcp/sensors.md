@@ -1,7 +1,8 @@
 # MCP contract: `sensors` toolset
 
 **Status:** draft — living spec (ADR-0003 §7).
-**Firmware:** `src/motion.cpp` (`MotionScreen`) — on-device only so far.
+**Firmware:** `src/motion.cpp` (`MotionScreen`); `sensors.motion` /
+`sensors.gesture` also expose a one-shot headless `run()` (`docs/mcp/headless.md`).
 **Toolset id:** `sensors` · **Hardware:** BMI270 6-axis IMU, ES8311 mic
 (planned). No radio — no `radio_busy` rule.
 
@@ -45,10 +46,23 @@ FFT of the ES8311 mic at 16 kHz (62.5 Hz bins, 8 kHz Nyquist).
 shakes }`; orientation ∈ face up/down, tilt left/right/up/down. Strike per
 shake / orientation change lands with the headless path.
 
+## Headless one-shot (implemented)
+
+`sensors.motion` and `sensors.gesture` both back their `run()` with a single
+IMU sample:
+
+```json
+{ "ax": 0.01, "ay": 0.02, "az": 0.99, "accel_dev_g": 0.004,
+  "gyro_dps": 1.2, "moving": false, "face": "flat" }
+```
+
+`face` ∈ `flat | inverted | left | right | top | bottom`. `moving` uses the
+"med" thresholds. Reachable now via `GET /api/tools/run?id=sensors.motion`.
+
 ## Planned (ADR-0001)
 
-- **`sensors.imu_read`** — `{ station }` → one instantaneous
-  `{ accel:[x,y,z], gyro:[x,y,z], temp }`.
+- **`sensors.imu_read`** — a dedicated id for the one-shot above, once the
+  MCP server exists (today it rides on `sensors.motion` / `sensors.gesture`).
 
 ---
 

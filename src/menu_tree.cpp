@@ -1,6 +1,10 @@
 #include "menu_tree.h"
 
+#include <M5Unified.h>
+#include <math.h>
+
 #include <cstdio>
+#include <string>
 #include <vector>
 
 #include "ble_scan.h"
@@ -39,6 +43,29 @@ const char* toolsetLabel(const std::string& t) {
 }
 
 namespace {
+
+// One-shot IMU read, JSON. Backs the headless run() for the sensor tools:
+// pure I2C, no radio, so it works while the Web UI SoftAP is up.
+std::string imuSnapshot() {
+  float ax = 0, ay = 0, az = 0, gx = 0, gy = 0, gz = 0;
+  M5.Imu.getAccel(&ax, &ay, &az);
+  M5.Imu.getGyro(&gx, &gy, &gz);
+  const float aDev = fabsf(sqrtf(ax * ax + ay * ay + az * az) - 1.0f);
+  const float gMag = sqrtf(gx * gx + gy * gy + gz * gz);
+  const bool moving = aDev > 0.16f || gMag > 40.0f;  // "med" thresholds
+  const char* face = "flat";
+  if (az < -0.6f) face = "inverted";
+  else if (ax > 0.6f) face = "right";
+  else if (ax < -0.6f) face = "left";
+  else if (ay > 0.6f) face = "top";
+  else if (ay < -0.6f) face = "bottom";
+  char buf[192];
+  std::snprintf(buf, sizeof(buf),
+                "{\"ax\":%.3f,\"ay\":%.3f,\"az\":%.3f,\"accel_dev_g\":%.3f,"
+                "\"gyro_dps\":%.1f,\"moving\":%s,\"face\":\"%s\"}",
+                ax, ay, az, aDev, gMag, moving ? "true" : "false", face);
+  return buf;
+}
 
 std::string aboutText() {
   char buf[256];
@@ -114,7 +141,8 @@ void registerBuiltinTools() {
                 [] { return static_cast<Screen*>(new WifiMonitorScreen()); }});
   registry.add({"sensors.motion", "Motion / Tamper", "sensors",
                 "BMI270 movement watch",
-                [] { return static_cast<Screen*>(new MotionScreen()); }});
+                [] { return static_cast<Screen*>(new MotionScreen()); },
+                [](const std::string&) { return imuSnapshot(); }});
   registry.add({"ir.tvbgone", "TV-B-Gone", "ir",
                 "Sweep common TV power codes",
                 [] { return static_cast<Screen*>(new TvBGoneScreen()); }});
@@ -132,7 +160,8 @@ void registerBuiltinTools() {
                 [] { return static_cast<Screen*>(new EvilPortalScreen()); }});
   registry.add({"sensors.gesture", "Gesture", "sensors",
                 "BMI270 orientation + shake",
-                [] { return static_cast<Screen*>(new GestureScreen()); }});
+                [] { return static_cast<Screen*>(new GestureScreen()); },
+                [](const std::string&) { return imuSnapshot(); }});
   registry.add({"wifi.handshake", "Handshake Capture", "wifi",
                 "Passive EAPOL capture to pcap",
                 [] { return static_cast<Screen*>(new WifiHandshakeScreen()); }});

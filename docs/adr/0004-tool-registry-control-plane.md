@@ -64,6 +64,12 @@ The same registry entry eventually carries `run(params) -> result`. Menu,
 web, and MCP then all dispatch through one object; the `Screen` is a thin
 view over it.
 
+**Landed 2026-08-31:** `Tool::run` (nullable) + `Registry::run(id, params)
+-> RunResult` with outcomes `Ok | NotFound | Disabled | NoHeadlessPath`
+mapping onto the §3 error vocabulary. Web route `GET /api/tools/run`.
+`sensors.motion` / `sensors.gesture` expose a one-shot IMU read; radio and
+emitting tools keep `run` null on the station (see `docs/mcp/headless.md`).
+
 ## Consequences
 
 - **This cycle:** `src/tool.h` + `src/registry.{h,cpp}`; tools register at
