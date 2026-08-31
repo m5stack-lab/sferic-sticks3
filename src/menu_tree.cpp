@@ -5,12 +5,14 @@
 
 #include "ble_scan.h"
 #include "ble_spam.h"
+#include "capture_screen.h"
 #include "evil_portal.h"
 #include "gesture.h"
 #include "hal.h"
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
 #include "mic_spectrum.h"
+#include "wifi_handshake.h"
 #include "motion.h"
 #include "registry.h"
 #include "tools_screen.h"
@@ -78,6 +80,7 @@ std::vector<MenuItem> buildRoot() {
                        "Settings",
                        std::vector<MenuItem>{
                            {"Tools", [] { ui.push(new ToolsScreen()); }},
+                           {"Capture", [] { ui.push(new CaptureScreen()); }},
                            {"About", [] {
                               ui.push(new InfoScreen("About", aboutText()));
                             }},
@@ -121,6 +124,9 @@ void registerBuiltinTools() {
   registry.add({"sensors.gesture", "Gesture", "sensors",
                 "BMI270 orientation + shake",
                 [] { return static_cast<Screen*>(new GestureScreen()); }});
+  registry.add({"wifi.handshake", "Handshake Capture", "wifi",
+                "Passive EAPOL capture to pcap",
+                [] { return static_cast<Screen*>(new WifiHandshakeScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

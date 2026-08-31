@@ -1,0 +1,190 @@
+#include "wifi_handshake.h"
+
+#include <WiFi.h>
+#include <esp_timer.h>
+#include <esp_wifi.h>
+#include <string.h>
+
+#include "hal.h"
+#include "pcap.h"
+
+namespace {
+constexpr int kTitleH = 18;
+constexpr int kRowH = 12;
+constexpr size_t kBufBytes = 512 * 1024;
+
+// SPSC ring of "interesting" frame headers to merge into the AP list.
+struct Hit {
+  uint8_t bssid[6];
+  char ssid[33];  // "" when not a beacon
+  bool eapol;
+  int8_t rssi;
+};
+constexpr uint8_t kRing = 32;
+volatile Hit g_ring[kRing];
+volatile uint8_t g_head = 0, g_tail = 0;
+
+void push(const Hit& h) {
+  const uint8_t nh = (g_head + 1) & (kRing - 1);
+  if (nh == g_tail) return;
+  memcpy((void*)&g_ring[g_head], &h, sizeof(h));
+  g_head = nh;
+}
+
+uint8_t g_channel = 1;
+
+void sniff(void* buf, wifi_promiscuous_pkt_type_t type) {
+  auto* p = static_cast<wifi_promiscuous_pkt_t*>(buf);
+  const uint8_t* f = p->payload;
+  const uint16_t len = p->rx_ctrl.sig_len;
+  if (len < 24) return;
+
+  const uint8_t fc0 = f[0];
+  const uint8_t ftype = (fc0 >> 2) & 0x3;
+  const uint8_t subtype = (fc0 >> 4) & 0xF;
+
+  if (ftype == 0 && subtype == 8) {  // beacon
+    Hit h{};
+    memcpy(h.bssid, f + 16, 6);  // addr3 = BSSID
+    h.rssi = p->rx_ctrl.rssi;
+    // tagged params start at 36 (24 hdr + 12 fixed); tag 0 = SSID
+    if (len > 38 && f[36] == 0) {
+      uint8_t sl = f[37];
+      if (sl > 32) sl = 32;
+      if (38 + sl <= len) {
+        memcpy(h.ssid, f + 38, sl);
+        h.ssid[sl] = '\0';
+      }
+    }
+    h.eapol = false;
+    push(h);
+    capture.writeFrame(f, len, p->rx_ctrl.rssi, g_channel, esp_timer_get_time());
+    return;
+  }
+
+  if (ftype == 2) {  // data
+    const bool qos = subtype & 0x08;
+    const uint16_t hdr = 24 + (qos ? 2 : 0);
+    if (len < hdr + 8) return;
+    static const uint8_t snap_eapol[8] = {0xAA, 0xAA, 0x03, 0x00,
+                                          0x00, 0x00, 0x88, 0x8E};
+    if (memcmp(f + hdr, snap_eapol, 8) != 0) return;
+    Hit h{};
+    memcpy(h.bssid, f + 16, 6);  // addr3 = BSSID for infra
+    h.ssid[0] = '\0';
+    h.eapol = true;
+    h.rssi = p->rx_ctrl.rssi;
+    push(h);
+    capture.writeFrame(f, len, p->rx_ctrl.rssi, g_channel, esp_timer_get_time());
+  }
+}
+}  // namespace
+
+void WifiHandshakeScreen::onEnter() {
+  dirty_ = true;
+  aps_.clear();
+  top_ = 0;
+  capture.begin(kBufBytes);
+  capture.reset();
+  capture.setRecording(true);
+  g_head = g_tail = 0;
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&sniff);
+  esp_wifi_set_channel(ch_, WIFI_SECOND_CHAN_NONE);
+  g_channel = ch_;
+}
+
+void WifiHandshakeScreen::onExit() {
+  esp_wifi_set_promiscuous_rx_cb(nullptr);
+  esp_wifi_set_promiscuous(false);
+  capture.setRecording(false);
+  WiFi.mode(WIFI_OFF);
+}
+
+void WifiHandshakeScreen::tick() {
+  const BtnEvent a = hal.event(Btn::A);
+  const BtnEvent b = hal.event(Btn::B);
+  if (b == BtnEvent::Hold) {
+    pop();
+    return;
+  }
+  if (b == BtnEvent::Click) {
+    Serial.printf("[handshake] export %u frames %u bytes\n", capture.frames(),
+                  (unsigned)capture.used());
+    capture.dumpBase64(Serial);
+  } else if (a == BtnEvent::Click) {
+    top_++;
+    dirty_ = true;
+  }
+
+  bool got = false;
+  while (g_tail != g_head) {
+    Hit h;
+    memcpy(&h, (const void*)&g_ring[g_tail], sizeof(h));
+    g_tail = (g_tail + 1) & (kRing - 1);
+    got = true;
+
+    Ap* ap = nullptr;
+    for (auto& x : aps_)
+      if (memcmp(x.bssid, h.bssid, 6) == 0) {
+        ap = &x;
+        break;
+      }
+    if (!ap) {
+      if (aps_.size() >= 24) continue;
+      aps_.push_back(Ap{});
+      ap = &aps_.back();
+      memcpy(ap->bssid, h.bssid, 6);
+      ap->eapol = 0;
+      ap->ssid = "?";
+    }
+    ap->rssi = h.rssi;
+    if (h.ssid[0]) ap->ssid = h.ssid;
+    if (h.eapol && ap->eapol < 255) ap->eapol++;
+  }
+  if (got) dirty_ = true;
+
+  const uint32_t now = hal.nowMs();
+  if (now - lastHop_ > 400) {
+    lastHop_ = now;
+    ch_ = ch_ % 11 + 1;
+    g_channel = ch_;
+    esp_wifi_set_channel(ch_, WIFI_SECOND_CHAN_NONE);
+  }
+  if (now - lastDraw_ > 500) dirty_ = true;
+  if (dirty_) {
+    draw();
+    dirty_ = false;
+    lastDraw_ = now;
+  }
+}
+
+void WifiHandshakeScreen::draw() {
+  auto& g = hal.gfx();
+  g.fillScreen(TFT_BLACK);
+  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
+  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.setTextSize(1);
+  g.setCursor(4, 5);
+  g.printf("Handshake  ch%d  %uKB%s", ch_, (unsigned)(capture.used() / 1024),
+           capture.full() ? " FULL" : "");
+
+  const int rows = (hal.h() - kTitleH - 10) / kRowH;
+  if (top_ > (int)aps_.size() - rows) top_ = 0;
+  if (top_ < 0) top_ = 0;
+
+  for (int i = 0; i < rows && (top_ + i) < (int)aps_.size(); ++i) {
+    const Ap& ap = aps_[top_ + i];
+    const bool hs = ap.eapol >= 2;
+    g.setTextColor(hs ? TFT_GREEN : ap.eapol ? TFT_YELLOW : TFT_LIGHTGREY,
+                   TFT_BLACK);
+    g.setCursor(2, kTitleH + 3 + i * kRowH);
+    g.printf("%-11s e%u %s", ap.ssid.substr(0, 11).c_str(), ap.eapol,
+             hs ? "HS" : "");
+  }
+
+  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setCursor(4, hal.h() - 9);
+  g.print("A scroll  B export  B(hold) back");
+}

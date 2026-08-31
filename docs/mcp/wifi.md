@@ -85,11 +85,15 @@ brand-impersonating. Authorized phishing-resistance testing only
 
 ## Planned (firmware stubs — see ADR-0001)
 
-### `wifi.handshake` — EAPOL capture → flash
+## `wifi.handshake`  — implemented (firmware: Handshake Capture)
 
-`{ station, target_bssid?, channel?, timeout_ms }` → a **flash** containing
-the captured EAPOL frames + beacon; `{ flash_id, complete: bool }`. Passive
-capture only; no on-device cracking.
+Passive. Hops channels; writes every beacon (once per BSSID) and every
+EAPOL frame to the shared pcap buffer (see `pcap.md`). Per-BSSID EAPOL
+count; >= 2 EAPOL frames flags a likely-complete handshake. `{ station,
+duration_ms }` -> `{ aps: [{ bssid, ssid, eapol_count, handshake }],
+capture: <pcap ref> }`. No deauth, no on-device cracking (ADR-0001).
+
+## Planned (firmware stubs — see ADR-0001)
 
 ---
 
