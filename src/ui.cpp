@@ -74,6 +74,7 @@ void MenuScreen::onEnter() {
 }
 
 void MenuScreen::tick() {
+  if (hal.wokeThisFrame()) dirty_ = true;  // repaint after screen sleep
   const BtnEvent a = hal.event(Btn::A);
   const BtnEvent b = hal.event(Btn::B);
 
@@ -132,6 +133,7 @@ InfoScreen::InfoScreen(std::string title, std::string body)
 }
 
 void InfoScreen::tick() {
+  if (hal.wokeThisFrame()) dirty_ = true;  // repaint after screen sleep
   const BtnEvent a = hal.event(Btn::A);
   const BtnEvent b = hal.event(Btn::B);
   const int rows = (hal.h() - kTitleH - 10) / 12;

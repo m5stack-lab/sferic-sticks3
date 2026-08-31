@@ -7,6 +7,7 @@
 #include "ble_hid.h"
 #include "ble_spam.h"
 #include "capture_screen.h"
+#include "display_screen.h"
 #include "evil_portal.h"
 #include "gesture.h"
 #include "hal.h"
@@ -86,6 +87,7 @@ std::vector<MenuItem> buildRoot() {
                        "Settings",
                        std::vector<MenuItem>{
                            {"Tools", [] { ui.push(new ToolsScreen()); }},
+                           {"Display", [] { ui.push(new DisplayScreen()); }},
                            {"Capture", [] { ui.push(new CaptureScreen()); }},
                            {"Web UI", [] { ui.push(new WebUiScreen()); }},
                            {"About", [] {

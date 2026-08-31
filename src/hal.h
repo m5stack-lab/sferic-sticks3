@@ -29,7 +29,18 @@ class Hal {
   M5GFX& gfx() { return M5.Display; }
   int w() const { return M5.Display.width(); }
   int h() const { return M5.Display.height(); }
-  void backlight(uint8_t pct);  // 0..100
+
+  // brightness 0..100 when awake; persisted to NVS
+  void setBrightness(uint8_t pct);
+  uint8_t brightness() const { return bright_; }
+
+  // screen sleep: backlight off after `ms` idle (0 = never); persisted.
+  // a button press wakes and is swallowed (wakes, doesn't also act).
+  void setSleepTimeout(uint32_t ms);
+  uint32_t sleepTimeout() const { return sleepMs_; }
+  bool awake() const { return awake_; }
+  bool wokeThisFrame() const { return woke_; }
+  void poke();  // reset idle timer; wake if asleep
 
   // --- system ---
   uint32_t nowMs() const { return millis(); }
@@ -40,6 +51,8 @@ class Hal {
 
  private:
   static constexpr uint32_t kHoldMs = 500;
+  static constexpr uint32_t kDefaultSleepMs = 30000;
+  static constexpr uint8_t kDefaultBright = 80;
   struct BtnState {
     bool down = false;
     uint32_t downAt = 0;
@@ -49,6 +62,16 @@ class Hal {
   BtnState a_, b_;
   void poll(BtnState& s, bool raw, uint32_t now);
   void pollSerial();  // 'a'/'A'/'b'/'B' -> Click/Hold, for on-desk testing
+
+  // --- screen sleep ---
+  uint8_t bright_ = kDefaultBright;      // configured awake brightness, 0..100
+  uint32_t sleepMs_ = kDefaultSleepMs;   // idle -> backlight off; 0 = never
+  uint32_t lastAct_ = 0;                 // millis() of last input
+  bool awake_ = true;
+  bool woke_ = false;                    // set for the one frame a wake happens
+  void applyBacklight(bool on);
+  void loadPrefs();
+  void savePrefs();
 };
 
 extern Hal hal;
