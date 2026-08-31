@@ -6,6 +6,7 @@
 #include "ble_scan.h"
 #include "ble_spam.h"
 #include "evil_portal.h"
+#include "gesture.h"
 #include "hal.h"
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
@@ -117,6 +118,9 @@ void registerBuiltinTools() {
   registry.add({"wifi.portal", "Evil Portal", "wifi",
                 "Open AP + captive login capture (authorized testing)",
                 [] { return static_cast<Screen*>(new EvilPortalScreen()); }});
+  registry.add({"sensors.gesture", "Gesture", "sensors",
+                "BMI270 orientation + shake",
+                [] { return static_cast<Screen*>(new GestureScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

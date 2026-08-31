@@ -5,6 +5,7 @@
 #include <string>
 
 #include "ble_common.h"
+#include "ble_gatt.h"
 #include "hal.h"
 
 namespace {
@@ -21,7 +22,10 @@ uint16_t rssiColor(int rssi) {
 
 void BleScanScreen::onEnter() {
   dirty_ = true;
-  if (started_) return;
+  if (started_) {
+    if (scan_ && !scan_->isScanning()) scan_->start(0, false);
+    return;
+  }
   scan_ = bleScan();
   scan_->setActiveScan(true);
   scan_->setMaxResults(48);
@@ -214,8 +218,12 @@ void BleDetailScreen::tick() {
   const BtnEvent b = hal.event(Btn::B);
   const int rows = (hal.h() - kTitleH - 10) / 12;
 
-  if (b == BtnEvent::Click || b == BtnEvent::Hold) {
+  if (b == BtnEvent::Hold) {
     pop();
+    return;
+  }
+  if (b == BtnEvent::Click && s_.connectable) {
+    ui.push(new GattScreen(s_.addr, s_.addr_type));
     return;
   }
   if (a == BtnEvent::Click) {
@@ -245,5 +253,6 @@ void BleDetailScreen::draw() {
   }
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
-  g.print((int)lines_.size() > rows ? "A scroll  B back" : "B back");
+  g.print(s_.connectable ? "A scroll  B connect  B(hold) back"
+                         : "A scroll  B(hold) back");
 }

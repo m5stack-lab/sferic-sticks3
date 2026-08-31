@@ -62,6 +62,15 @@ peak_new_addr, verdict }` where verdict ∈ QUIET / BUSY / SPAM (SPAM =
 adv_rate > 80/s and new_addr_rate > 40/s — an address-rotating flood).
 Strike-per-flood output lands with the headless path.
 
+## `ble.gatt`  — implemented (firmware: connect from the decode view)
+
+On the device: BLE Scan -> a connectable device -> decode -> B connects and
+enumerates. `{ station, address }` -> `{ services: [{ uuid, characteristics:
+[{ uuid, props, value? }] }] }` where props is a subset of R/W/N/I;
+readable characteristics are read once. Disconnects after.
+
+## Planned (ADR-0001)
+
 ### `ble.hid`
 
 Act as a BLE HID peripheral (keyboard/mouse) toward a paired host — likely

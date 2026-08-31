@@ -39,6 +39,12 @@ Watch the IMU for movement above a threshold; emit a strike per event.
 `{ station, duration_ms }` → `{ peak_hz, peak_mag, bins?[] }` — a 256-pt
 FFT of the ES8311 mic at 16 kHz (62.5 Hz bins, 8 kHz Nyquist).
 
+## `sensors.gesture`  — implemented (firmware: Gesture)
+
+`{ station, duration_ms }` → live `{ orientation, accel:[x,y,z], gyro_dps,
+shakes }`; orientation ∈ face up/down, tilt left/right/up/down. Strike per
+shake / orientation change lands with the headless path.
+
 ## Planned (ADR-0001)
 
 - **`sensors.imu_read`** — `{ station }` → one instantaneous
