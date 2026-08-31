@@ -69,15 +69,15 @@ per-frame → strikes path lands with the headless work.
 Per-frame strike shape (planned): `{ ts, channel, type, subtype, addr1,
 addr2, addr3, rssi, len }`.
 
-## Planned (firmware stubs — see ADR-0001)
-
-Sketches only; params/returns firm up when each is built.
-
 ## `wifi.probe`  — implemented (firmware: Probe / Beacon)
 
 `{ station, duration_ms }`, auto-hops channels → `{ clients: [{ mac,
 probed_ssid, rssi, count, last_seen }] }` (one entry per unique mac+ssid;
 empty ssid = wildcard probe).
+
+## Planned (firmware stubs — see ADR-0001)
+
+Sketches only; params/returns firm up when each is built.
 
 ### `wifi.handshake` — EAPOL capture → flash
 
