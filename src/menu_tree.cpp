@@ -4,6 +4,7 @@
 
 #include "ble_scan.h"
 #include "hal.h"
+#include "ir_tool.h"
 #include "wifi_scan.h"
 
 namespace {
@@ -58,7 +59,7 @@ Screen* makeRootMenu() {
                   }),
           submenu("Infrared",
                   {
-                      stub("Learn / Replay"),
+                      {"Learn / Replay", [] { ui.push(new IrScreen()); }},
                       stub("Protocol Decode"),
                       stub("TV-B-Gone"),
                   }),
