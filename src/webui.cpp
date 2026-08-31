@@ -40,7 +40,10 @@ void sendStatus() {
        ",\"used\":" + String((uint32_t)capture.used()) +
        ",\"cap\":" + String((uint32_t)capture.capacity()) +
        ",\"recording\":" + String(capture.recording() ? "true" : "false") +
-       ",\"full\":" + String(capture.full() ? "true" : "false") + "}";
+       ",\"full\":" + String(capture.full() ? "true" : "false") + "},";
+  j += "\"display\":{\"sleep_ms\":" + String((uint32_t)hal.sleepTimeout()) +
+       ",\"brightness\":" + String(hal.brightness()) +
+       ",\"awake\":" + String(hal.awake() ? "true" : "false") + "}";
   j += "}";
   g_web->send(200, "application/json", j);
 }
@@ -99,6 +102,17 @@ void runTool() {
   g_web->send(code, "application/json", j);
 }
 
+// POST /api/display?sleep_ms=<ms>&brightness=<0..100> — screen-sleep config,
+// the web mirror of Settings > Display. hal.* persists to NVS.
+void setDisplay() {
+  ++g_reqs;
+  if (g_web->hasArg("sleep_ms"))
+    hal.setSleepTimeout((uint32_t)g_web->arg("sleep_ms").toInt());
+  if (g_web->hasArg("brightness"))
+    hal.setBrightness((uint8_t)g_web->arg("brightness").toInt());
+  g_web->send(200, "application/json", "{\"ok\":true}");
+}
+
 void sendPcap() {
   ++g_reqs;
   g_web->sendHeader("Content-Disposition", "attachment; filename=sferic.pcap");
@@ -129,6 +143,7 @@ void WebUiScreen::onEnter() {
   g_web->on("/api/tools", sendTools);
   g_web->on("/api/tools/set", HTTP_POST, setTool);
   g_web->on("/api/tools/run", runTool);
+  g_web->on("/api/display", HTTP_POST, setDisplay);
   g_web->on("/api/capture.pcap", sendPcap);
   g_web->onNotFound(sendIndex);  // captive
   g_web->begin();

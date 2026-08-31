@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>sferic</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><b>sferic</b> <span id="name"></span></header>
+<main>
+  <div class="grid" id="stats"></div>
+
+  <h3>Display</h3>
+  <div class="card">
+    <div class="row"><label for="sleep">Sleep</label><select id="sleep"></select></div>
+    <div class="row"><label for="bright">Brightness</label><select id="bright"></select></div>
+  </div>
+
+  <h3>Capture</h3>
+  <a class="btn" id="dl" href="/api/capture.pcap">download capture.pcap</a>
+
+  <div id="tools"></div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

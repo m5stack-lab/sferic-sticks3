@@ -21,6 +21,10 @@ jobs:
           restore-keys: pio-native-
       - run: pip install --upgrade platformio
       - run: pio test -e native
+      - name: webui_html.h matches web/ sources
+        run: |
+          python scripts/gen_webui.py
+          git diff --exit-code src/webui_html.h
 
   build:
     runs-on: ubuntu-latest

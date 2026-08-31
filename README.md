@@ -55,9 +55,15 @@ replay / decode / scan, no untargeted-DoS headline features.
 ## Web UI
 
 `Settings > Web UI` stands up an open SoftAP `sferic-ui` (`192.168.4.1`) and
-a one-page dashboard: tool enable/disable, live status, and a
+a one-page dashboard: tool enable/disable, a **Run** button on
+`run()`-capable tools, live status, screen sleep / brightness, and a
 `capture.pcap` download. It is the exclusive WiFi user while up — WiFi tools
 pause. ([ADR-0006](docs/adr/0006-web-ui.md))
+
+The page is authored in [`web/`](web/) (`index.html` + `style.css` +
+`app.js`); `scripts/gen_webui.py` inlines it into `src/webui_html.h` on
+every firmware build (CI checks the committed header is current) — don't
+hand-edit that header.
 
 `GET /api/tools/run?id=<tool-id>` is the headless launch path — the same
 `Registry::run` dispatch the MCP server will use. Only non-radio tools
@@ -83,6 +89,7 @@ src/menu_tree.*  registerBuiltinTools() + the live menu
 src/pcap.*       PSRAM pcap capture buffer
 src/confirm.h    two-step arm/confirm guard
 src/<tool>.*     one screen per tool
+web/             web UI sources -> src/webui_html.h via scripts/gen_webui.py
 docs/adr/        architecture decision records (0001–0007)
 docs/mcp/        per-toolset MCP contracts + strike/pcap formats
 test/            host unit tests — `pio test -e native`

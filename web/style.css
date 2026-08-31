@@ -1,0 +1,37 @@
+:root { color-scheme: dark }
+* { box-sizing: border-box }
+body { font-family: system-ui, sans-serif; margin: 0; background: #111; color: #ddd }
+header { padding: 12px 16px; background: #1b1b1b; border-bottom: 1px solid #333 }
+header b { color: #6cf; font-size: 18px }
+header span { color: #888; font-size: 13px }
+main { padding: 12px 16px; max-width: 640px; margin: 0 auto }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 16px }
+.stat { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 8px 10px }
+.stat small { color: #888; display: block }
+
+h3 { margin: 16px 0 6px; color: #9ad; font-size: 14px; text-transform: uppercase; letter-spacing: .04em }
+
+.card { background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 10px 12px; margin: 6px 0 }
+.row { display: flex; align-items: center; gap: 10px }
+.row + .row { margin-top: 8px }
+.row .m { flex: 1; min-width: 0 }
+.row .m b { display: block }
+.row .m small { color: #888 }
+label { color: #9ad; font-size: 13px; min-width: 84px }
+
+.sw { width: 44px; height: 24px; border-radius: 12px; background: #444; position: relative; flex: none; cursor: pointer; transition: .15s }
+.sw.on { background: #2a7 }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .15s }
+.sw.on::after { left: 22px }
+
+a.btn, button { background: #2a6; color: #fff; border: 0; border-radius: 8px; padding: 10px 14px; text-decoration: none; font: inherit; cursor: pointer }
+button.sm { padding: 6px 12px; font-size: 13px }
+button.ghost { background: #333; color: #cde }
+button:disabled { opacity: .4; cursor: default }
+
+select { background: #222; color: #ddd; border: 1px solid #444; border-radius: 6px; padding: 6px 8px; font: inherit }
+
+pre.out { margin: 8px 0 0; padding: 8px 10px; background: #0c0c0c; border: 1px solid #333; border-radius: 6px;
+  color: #9f9; font-size: 12px; white-space: pre-wrap; word-break: break-word; overflow-x: auto }
+pre.out.err { color: #f99 }

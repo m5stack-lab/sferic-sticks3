@@ -79,3 +79,18 @@ Enable/disable semantics are identical to the device and MCP surfaces
 - **Full tool control in v1.** Rejected: needs the headless refactor first;
   shipping config + capture-download now is honest and unblocks the useful
   90% (pull your pcap off the device over WiFi instead of serial).
+
+## Update — 2026-08-31
+
+- **Page sources moved out of the C string.** `web/{index.html,style.css,
+  app.js}` are the sources; `scripts/gen_webui.py` inlines them into
+  `src/webui_html.h` (a `pre:` extra_script on the firmware envs, and a CI
+  check that the committed header matches). Don't hand-edit the header.
+- **Tool launch landed.** The headless `run()` path exists (ADR-0004 §4), so
+  the SPA now shows a **Run** button on `has_run` tools → `GET
+  /api/tools/run?id=<id>` → result rendered inline. `/api/tools` carries
+  `has_run`. (Route is `/api/tools/run`, not the `/api/tools/<id>/run`
+  guessed above.)
+- **Display controls.** `/api/status` gained `display:{sleep_ms,brightness,
+  awake}`; `POST /api/display?sleep_ms=&brightness=` mirrors `Settings >
+  Display`. The page has Sleep / Brightness selectors.
