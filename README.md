@@ -1,45 +1,89 @@
 # sferic
 
-ESP32-S3 hardware / radio multitool firmware for the **M5Stack StickS3**.
-MIT licensed. In the spirit of pr3y/Bruce — reference only, not a fork.
+MIT-licensed ESP32-S3 hardware / radio multitool firmware for the **M5Stack
+StickS3**. Bruce is a design reference, not a fork ([ADR-0001](docs/adr/0001-onboard-rf-and-tool-capabilities.md)).
 
-The architecture is a lightning-detection network: distributed **stations**
-(M5 devices) capture RF impulses, a central collector does time-of-arrival
-work. Vocabulary follows the field — station, **strike** (one event),
+The architecture is a **lightning-detection network**: distributed
+*stations* (M5 devices) capture RF impulses; a central collector correlates
+them. Vocabulary follows the field — station, **strike** (one event),
 **flash** (a capture session). See
-[`docs/adr/0002-project-name-sferic.md`](docs/adr/0002-project-name-sferic.md).
+[`docs/adr/`](docs/adr/) for the full design and [`docs/mcp/`](docs/mcp/)
+for the per-toolset contracts.
 
 ## Build & flash
 
 ```sh
-pio run -e sferic                  # build
-pio run -e sferic -t upload        # flash (StickS3 on USB-C)
-pio device monitor -b 115200       # serial (assert DTR)
+pio run -e sferic                    # default build
+pio run -e sferic -t upload          # flash (StickS3 on USB-C)
+pio device monitor -b 115200         # serial — assert DTR
 ```
 
-Toolchain: PlatformIO + **Arduino framework** + M5Unified. (ESP-IDF is a
-dead end here — M5GFX crashes in its SPI init under IDF 5.3.)
+Toolchain: PlatformIO + Arduino framework + M5Unified. (ESP-IDF is a dead
+end here — M5GFX crashes in its SPI init under IDF 5.3.)
 
-## On-device controls
+**`sferic-usbhid`** is a second build ([ADR-0005](docs/adr/0005-usb-mode-and-usb-hid-build.md)):
+`ARDUINO_USB_MODE=0` (TinyUSB), which unlocks the USB-HID tool but makes
+flashing less reliable — hold the side button while connecting to force the
+bootloader. The default `sferic` build keeps the rock-solid
+USB-Serial/JTAG.
+
+## Controls
 
 Two buttons: **A** = next / (hold) prev · **B** = select / (hold) back.
-Over serial you can also type `a` `A` `b` `B` to drive the menu.
+Over serial you can also type `a A b B` to drive the menu.
 
-## What's here
+Tools that emit IR / RF / keystrokes (TV-B-Gone, IR Replay, BLE/USB HID) are
+**two-step**: B arms, B again fires, A cancels, 3-second timeout.
 
-- **Menu / HAL shell** — `src/hal.*` (M5Unified wrapper, Click/Hold button
-  events), `src/ui.*` (`Screen` + `ScreenStack`, `MenuScreen`, `InfoScreen`),
-  `src/menu_tree.*` (the root menu from ADR-0001).
-- **WiFi → AP Scan** (`src/wifi_scan.*`) — async 2.4 GHz scan; SSID / RSSI /
-  channel / encryption, colour-coded by signal; A = next, A-hold / B =
-  rescan.
-- Everything else in the menu is a stub — see
-  [`docs/adr/0001-onboard-rf-and-tool-capabilities.md`](docs/adr/0001-onboard-rf-and-tool-capabilities.md)
-  for the full tool catalog and build order.
+## Tools
 
-## Hardware
+| Toolset | Tools |
+|---|---|
+| **WiFi** | AP Scan · Packet Monitor · Probe/Beacon · Evil Portal · Handshake Capture · Wardrive · Deauth Detector |
+| **Bluetooth** | Scan (→ decode → GATT browse) · Spam Detect · HID Keyboard |
+| **Infrared** | Learn / Replay · TV-B-Gone (~39 codes) · Protocol Decode |
+| **Sensors** | Motion / Tamper · Mic Spectrum · Gesture |
+| **USB** *(sferic-usbhid only)* | HID Keyboard |
+| **Settings** | Tools (enable/disable, persisted) · Capture (pcap buffer) · Web UI · About |
 
-M5Stack StickS3 — ESP32-S3-PICO-1-N8R8, 8 MB flash / 8 MB Octal PSRAM,
-ST7789P3 135×240, BMI270 IMU, ES8311 audio, IR TX/RX, M5PM1 PMIC.
-Planned add-on: pingequa **RF Pack S3** (nRF24L01+ + CC1101). Pin map in
-ADR-0001.
+Each tool is a `registry.add({...})` line in `src/menu_tree.cpp` plus a
+`Screen`; the menu is generated from the registry, filtered by the
+persisted enable flags. Authorized-use scope is in
+[ADR-0001](docs/adr/0001-onboard-rf-and-tool-capabilities.md) — capture /
+replay / decode / scan, no untargeted-DoS headline features.
+
+## Web UI
+
+`Settings > Web UI` stands up an open SoftAP `sferic-ui` (`192.168.4.1`) and
+a one-page dashboard: tool enable/disable, live status, and a
+`capture.pcap` download. It is the exclusive WiFi user while up — WiFi tools
+pause. ([ADR-0006](docs/adr/0006-web-ui.md))
+
+## Captures
+
+No SD slot, so 802.11 captures go to a **512 KB PSRAM pcap buffer**
+(`LINKTYPE_IEEE802_11_RADIOTAP`, valid Wireshark files). Export: the web
+UI's `capture.pcap` download, or base64 over serial from `Settings >
+Capture`. The fleet model ([ADR-0003](docs/adr/0003-companion-mcp-server.md),
+[ADR-0007](docs/adr/0007-fleet-composition.md)) hands captures to the MCP
+collector — no local persistence needed.
+
+## Layout
+
+```
+src/hal.*        M5Unified wrapper — the only board-specific code
+src/ui.*         Screen + ScreenStack, MenuScreen, InfoScreen
+src/registry.*   tool registry + NVS-persisted enable flags
+src/menu_tree.*  registerBuiltinTools() + the live menu
+src/pcap.*       PSRAM pcap capture buffer
+src/confirm.h    two-step arm/confirm guard
+src/<tool>.*     one screen per tool
+docs/adr/        architecture decision records (0001–0007)
+docs/mcp/        per-toolset MCP contracts + strike/pcap formats
+```
+
+## Status
+
+StickS3 firmware + local web UI. Not built yet: the MCP server (Pi 5
+collector), the headless `run()` path (so web/MCP can *launch* tools, not
+just configure), RF Pack S3 drivers (SubGHz / nRF24 — waiting on hardware).
