@@ -17,15 +17,57 @@ struct TvCode {
   const char* name;
 };
 
-// A small, common set. TV-B-Gone by nature is best-effort — aim, fire, hope.
+// Best-effort power/off codes for common TVs (and, by IR code-space overlap,
+// a fair number of other AV gear). Aim, fire, hope. Extend freely.
 const TvCode kCodes[] = {
-    {NEC, 0x20DF10EF, 32, "Samsung"},   {SAMSUNG, 0xE0E040BF, 32, "Samsung2"},
-    {NEC, 0x20DF10EF, 32, "LG"},        {SONY, 0xA90, 12, "Sony"},
-    {SONY, 0xA90, 15, "Sony15"},        {NEC, 0x2FD48B7, 32, "Toshiba"},
-    {NEC, 0x57E3E817, 32, "Vizio"},     {NEC, 0x00FFA25D, 32, "genNEC-A25D"},
-    {NEC, 0x1FE48B7, 32, "TCL"},        {RC5, 0x0C, 12, "Philips"},
-    {RC6, 0x0, 20, "PhilipsRC6"},       {PANASONIC, 0x40040100BCBD, 48, "Panasonic"},
-    {NEC, 0x4CB340BF, 32, "Sharp/NEC"}, {NEC, 0x10EF, 16, "gen16"},
+    // Samsung
+    {SAMSUNG, 0xE0E040BF, 32, "Samsung"},
+    {SAMSUNG, 0xE0E019E6, 32, "Samsung2"},
+    {NEC, 0x707708F7, 32, "Samsung3"},
+    // LG
+    {NEC, 0x20DF10EF, 32, "LG"},
+    {NEC, 0x20DF23DC, 32, "LG2"},
+    {NEC, 0x20DFA35C, 32, "LG3"},
+    // Sony (several report lengths)
+    {SONY, 0xA90, 12, "Sony12"},
+    {SONY, 0xA90, 15, "Sony15"},
+    {SONY, 0xA90, 20, "Sony20"},
+    {SONY, 0x750, 12, "Sony12b"},
+    // Panasonic
+    {PANASONIC, 0x40040100BCBD, 48, "Panasonic"},
+    {PANASONIC, 0x400401009C9D, 48, "Panasonic2"},
+    // Toshiba
+    {NEC, 0x2FD48B7, 32, "Toshiba"},
+    {NEC, 0x2FDD827, 32, "Toshiba2"},
+    // Sharp
+    {NEC, 0x4CB340BF, 32, "Sharp"},
+    {SHARP, 0x41A2, 15, "SharpP"},
+    // Philips
+    {RC5, 0x100C, 13, "PhilipsRC5"},
+    {RC6, 0x0, 20, "PhilipsRC6"},
+    // Vizio / TCL / RCA / Insignia / Hisense / Element / Sceptre / Sanyo
+    {NEC, 0x57E3E817, 32, "Vizio"},
+    {NEC, 0x20DF10EF, 32, "Vizio2"},
+    {NEC, 0x1FE48B7, 32, "TCL"},
+    {NEC, 0x1FE50AF, 32, "RCA"},
+    {NEC, 0xE13DB04F, 32, "Insignia"},
+    {NEC, 0x8F7A05F, 32, "Hisense"},
+    {NEC, 0xFDB04F, 32, "Element"},
+    {NEC, 0xC1AA09F6, 32, "Sceptre"},
+    {NEC, 0x2A4CD32, 32, "Sanyo"},
+    // JVC / Hitachi
+    {JVC, 0x3EC1, 16, "JVC"},
+    {NEC, 0x38C7A05F, 32, "Hitachi"},
+    // Generic NEC power codes (cover a lot of no-name / cheap gear)
+    {NEC, 0x00FFA25D, 32, "genA25D"},
+    {NEC, 0x00FF00FF, 32, "gen00FF"},
+    {NEC, 0x807F02FD, 32, "gen02FD"},
+    {NEC, 0x00FD00FF, 32, "gen00FD"},
+    {NEC, 0x00FE00FF, 32, "gen00FE"},
+    {NEC, 0xE0E0E01F, 32, "genE01F"},
+    {NEC, 0x10EFEB14, 32, "genEB14"},
+    {NEC, 0x4CB3609F, 32, "gen609F"},
+    {NEC, 0xF7C03F, 32, "genC03F"},
 };
 constexpr int kCount = sizeof(kCodes) / sizeof(kCodes[0]);
 
@@ -51,16 +93,18 @@ void TvBGoneScreen::tick() {
   const BtnEvent b = hal.event(Btn::B);
   hal.event(Btn::A);  // consume
 
+  const BtnEvent a = hal.event(Btn::A);
   if (b == BtnEvent::Hold) {
     pop();
     return;
   }
-  if (b == BtnEvent::Click && state_ != State::Firing) {
+  if (arm_.update(b == BtnEvent::Click && state_ != State::Firing,
+                  a == BtnEvent::Click, hal.nowMs())) {
     state_ = State::Firing;
     idx_ = 0;
     lastSend_ = 0;
-    dirty_ = true;
   }
+  dirty_ = true;
 
   if (state_ == State::Firing && hal.nowMs() - lastSend_ >= kGapMs) {
     if (idx_ < kCount) {
@@ -94,6 +138,17 @@ void TvBGoneScreen::draw() {
   g.print("Infrared  TV-B-Gone");
 
   g.setCursor(6, kTitleH + 14);
+  if (arm_.armed && state_ != State::Firing) {
+    g.setTextColor(TFT_RED, TFT_BLACK);
+    g.print("ARMED");
+    g.setCursor(6, kTitleH + 30);
+    g.setTextColor(TFT_WHITE, TFT_BLACK);
+    g.printf("B again -> fire %d codes", kCount);
+    g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    g.setCursor(4, hal.h() - 9);
+    g.print("B fire  A cancel  B(hold) back");
+    return;
+  }
   switch (state_) {
     case State::Idle:
       g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
@@ -119,5 +174,5 @@ void TvBGoneScreen::draw() {
 
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
-  g.print("B fire  B(hold) back");
+  g.print("B arm  B(hold) back");
 }

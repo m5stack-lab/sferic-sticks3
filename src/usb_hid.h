@@ -1,5 +1,6 @@
 #pragma once
 
+#include "confirm.h"
 #include "ui.h"
 
 // USB -> HID Keyboard. Only built under -DSFERIC_USB_HID (env sferic-usbhid,
@@ -12,6 +13,7 @@ class UsbHidScreen : public Screen {
 
  private:
   int payload_ = 0;
+  Arm typeArm_;
   bool dirty_ = true;
   uint32_t lastDraw_ = 0;
   void draw();

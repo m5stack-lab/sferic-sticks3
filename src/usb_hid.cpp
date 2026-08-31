@@ -36,14 +36,15 @@ void UsbHidScreen::tick() {
     pop();
     return;
   }
-  if (a == BtnEvent::Click) {
-    payload_ = (payload_ + 1) % kPayloadCount;
-    dirty_ = true;
-  } else if (b == BtnEvent::Click) {
+  const bool wasArmed = typeArm_.armed;
+  if (typeArm_.update(b == BtnEvent::Click, a == BtnEvent::Click,
+                      hal.nowMs())) {
     Serial.printf("[usbhid] type: %s", kPayloads[payload_]);
     g_kbd.print(kPayloads[payload_]);
-    dirty_ = true;
+  } else if (a == BtnEvent::Click && !wasArmed) {
+    payload_ = (payload_ + 1) % kPayloadCount;
   }
+  dirty_ = true;
   if (hal.nowMs() - lastDraw_ > 300) dirty_ = true;
   if (dirty_) {
     draw();
@@ -62,9 +63,10 @@ void UsbHidScreen::draw() {
   g.print("USB  HID Keyboard");
 
   int y = kTitleH + 8;
-  g.setTextColor(TFT_YELLOW, TFT_BLACK);
+  g.setTextColor(typeArm_.armed ? TFT_RED : TFT_YELLOW, TFT_BLACK);
   g.setCursor(6, y);
-  g.print("plug into a host, press B");
+  g.print(typeArm_.armed ? "ARMED - B again to type"
+                        : "plug into a host, press B");
   g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
   g.setCursor(6, y + 18);
   g.printf("payload %d/%d:", payload_ + 1, kPayloadCount);
@@ -76,7 +78,8 @@ void UsbHidScreen::draw() {
 
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
-  g.print("A payload  B type  B(hold) back");
+  g.print(typeArm_.armed ? "B type  A cancel  B(hold) back"
+                        : "A payload  B arm  B(hold) back");
 }
 
 #else  // stub so the file always compiles

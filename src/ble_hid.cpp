@@ -101,16 +101,18 @@ void BleHidScreen::tick() {
     pop();
     return;
   }
-  if (!sending_ && a == BtnEvent::Click) {
-    payload_ = (payload_ + 1) % kPayloadCount;
-    dirty_ = true;
-  } else if (!sending_ && b == BtnEvent::Click && g_connected) {
+  const bool wasArmed = typeArm_.armed;
+  if (!sending_ &&
+      typeArm_.update(b == BtnEvent::Click && g_connected,
+                      a == BtnEvent::Click, hal.nowMs())) {
     sending_ = true;
     sendPos_ = 0;
     lastKey_ = 0;
-    dirty_ = true;
     Serial.printf("[hid] typing: %s", kPayloads[payload_]);
+  } else if (!sending_ && a == BtnEvent::Click && !wasArmed) {
+    payload_ = (payload_ + 1) % kPayloadCount;
   }
+  dirty_ = true;
 
   if (sending_ && hal.nowMs() - lastKey_ > 12) {
     const char* s = kPayloads[payload_];
@@ -148,9 +150,13 @@ void BleHidScreen::draw() {
   g.print("BLE  HID Keyboard");
 
   int y = kTitleH + 8;
-  g.setTextColor(g_connected ? TFT_GREEN : TFT_YELLOW, TFT_BLACK);
+  g.setTextColor(typeArm_.armed ? TFT_RED
+                 : g_connected  ? TFT_GREEN
+                                : TFT_YELLOW, TFT_BLACK);
   g.setCursor(6, y);
-  g.print(g_connected ? "paired" : "advertising as sferic-kb");
+  g.print(typeArm_.armed ? "ARMED"
+          : g_connected  ? "paired"
+                         : "advertising as sferic-kb");
 
   g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
   g.setCursor(6, y + 18);
@@ -168,6 +174,9 @@ void BleHidScreen::draw() {
 
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
-  g.print(g_connected ? "A payload  B type  B(hold) back"
-                      : "A payload  B(hold) back");
+  if (typeArm_.armed)
+    g.print("B again -> type   A cancel");
+  else
+    g.print(g_connected ? "A payload  B arm  B(hold) back"
+                        : "A payload  B(hold) back");
 }

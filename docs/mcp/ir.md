@@ -75,8 +75,9 @@ not stored. A continuous peek.
 ### `ir.tvbgone`  — implemented
 
 `{ station, repeats? }` → sweeps a built-in set of common TV power codes
-(Samsung/LG/Sony/Toshiba/Vizio/TCL/Philips/Panasonic/...); returns
-`{ codes_sent: 14 }`. Best-effort by design.
+(~39: Samsung/LG/Sony/Toshiba/Sharp/Philips/Panasonic/Vizio/TCL/RCA/
+Insignia/Hisense/JVC/Hitachi + generic NEC); returns `{ codes_sent }`.
+Best-effort by design. On-device it is two-step (arm, then confirm).
 
 ---
 

@@ -73,11 +73,14 @@ void IrScreen::tick() {
     pop();
     return;
   }
-  if (a == BtnEvent::Click) {
-    arm();
-  } else if (b == BtnEvent::Click && mode_ == Mode::Captured) {
+  const bool wasArmed = replayArm_.armed;
+  const bool trigB = (b == BtnEvent::Click && mode_ == Mode::Captured);
+  if (replayArm_.update(trigB, a == BtnEvent::Click, hal.nowMs())) {
     replay();
+  } else if (a == BtnEvent::Click && !wasArmed) {
+    arm();  // (re)capture
   }
+  if (trigB || wasArmed != replayArm_.armed) dirty_ = true;
 
   if (mode_ == Mode::Listening && g_recv->decode(&g_results)) {
     strike_.proto = g_results.decode_type;
@@ -132,8 +135,8 @@ void IrScreen::draw() {
       g.print("Listening...");
       break;
     case Mode::Captured:
-      g.setTextColor(TFT_GREEN, TFT_BLACK);
-      g.print("Captured:");
+      g.setTextColor(replayArm_.armed ? TFT_RED : TFT_GREEN, TFT_BLACK);
+      g.print(replayArm_.armed ? "ARMED - B again to replay" : "Captured:");
       g.setCursor(6, kTitleH + 26);
       g.setTextColor(TFT_WHITE, TFT_BLACK);
       g.print(strike_.summary);
@@ -145,6 +148,7 @@ void IrScreen::draw() {
 
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
-  g.print(mode_ == Mode::Captured ? "A recapture  B replay  B(hold) back"
-                                  : "A arm  B(hold) back");
+  g.print(mode_ != Mode::Captured  ? "A arm  B(hold) back"
+          : replayArm_.armed       ? "B replay  A cancel  B(hold) back"
+                                   : "A recapture  B arm  B(hold) back");
 }

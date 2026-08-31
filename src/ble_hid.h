@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "confirm.h"
 #include "ui.h"
 
 // Bluetooth -> BLE HID. Advertises as a BLE keyboard; when a host pairs,
@@ -16,6 +17,7 @@ class BleHidScreen : public Screen {
 
  private:
   int payload_ = 0;
+  Arm typeArm_;
   bool dirty_ = true;
   bool sending_ = false;
   size_t sendPos_ = 0;
