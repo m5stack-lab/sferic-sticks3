@@ -40,6 +40,7 @@ class Hal {
   uint32_t sleepTimeout() const { return sleepMs_; }
   bool awake() const { return awake_; }
   bool wokeThisFrame() const { return woke_; }
+  uint32_t idleMs() const { return millis() - lastAct_; }  // since last input
   void poke();  // reset idle timer; wake if asleep
 
   // --- system ---

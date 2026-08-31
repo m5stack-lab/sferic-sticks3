@@ -25,8 +25,9 @@ void loop() {
   static uint32_t beat = 0;
   if (millis() - beat > 2000) {
     beat = millis();
-    Serial.printf("[beat] up=%lus heap=%uKB\n", millis() / 1000,
-                  (unsigned)(hal.freeHeap() / 1024));
+    Serial.printf("[beat] up=%lus heap=%uKB awake=%d idle=%lus\n",
+                  millis() / 1000, (unsigned)(hal.freeHeap() / 1024),
+                  hal.awake() ? 1 : 0, (unsigned long)(hal.idleMs() / 1000));
   }
   delay(16);
 }

@@ -72,12 +72,18 @@ void Hal::update() {
   poll(b_, bRaw, now);
   pollSerial();
 
-  if (aRaw || bRaw || a_.pending != BtnEvent::None || b_.pending != BtnEvent::None)
+  // Only a debounced Click/Hold (or a serial nav char, which also lands as a
+  // pending event) counts as activity. Checking the raw level here meant a
+  // stuck or noisy button line pinned the screen awake forever; a stuck line
+  // now fires at most one Hold, then latches quiet.
+  if (a_.pending != BtnEvent::None || b_.pending != BtnEvent::None)
     lastAct_ = now;
 
   if (sleepMs_ != 0 && (now - lastAct_) >= sleepMs_) {
     awake_ = false;
     applyBacklight(false);
+    Serial.printf("[hal] screen sleep (idle %lus)\n",
+                  (unsigned long)((now - lastAct_) / 1000));
   }
 }
 
@@ -96,6 +102,7 @@ void Hal::poke() {
     awake_ = true;
     woke_ = true;
     applyBacklight(true);
+    Serial.println("[hal] screen wake");
   }
 }
 
