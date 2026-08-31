@@ -44,15 +44,34 @@ Scan for nearby access points.
 
 ---
 
+## `wifi.monitor`  — implemented (firmware: Packet Monitor)
+
+Promiscuous 802.11 capture. Firmware today reports **counts** (total /
+mgmt / data / ctrl / rate / last RSSI) on a fixed or hopping channel; the
+per-frame → strikes path lands with the headless work.
+
+**Params**
+
+| name | type | default | notes |
+|---|---|---|---|
+| `station` | string | — | required |
+| `channel` | int \| `"hop"` | `1` | `"hop"` cycles 1–13 (~4/s) |
+| `duration_ms` | int | `10000` | window to summarize over |
+
+**Returns** — a summary now; a **flash** of per-frame strikes once headless:
+
+```json
+{ "station": "stick-1", "channel": 1, "elapsed_ms": 10000,
+  "total": 512, "mgmt": 498, "data": 12, "ctrl": 2,
+  "rate_per_s": 51, "last_rssi": -80 }
+```
+
+Per-frame strike shape (planned): `{ ts, channel, type, subtype, addr1,
+addr2, addr3, rssi, len }`.
+
 ## Planned (firmware stubs — see ADR-0001)
 
 Sketches only; params/returns firm up when each is built.
-
-### `wifi.monitor` — promiscuous capture → strikes
-
-`{ station, channel | "hop", duration_ms, filter? }` → a **flash** of
-strikes, one per captured frame (or per summarized burst): `{ ts, channel,
-type, subtype, addr1, addr2, addr3, rssi, len }`.
 
 ### `wifi.probes`
 

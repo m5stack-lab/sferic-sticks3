@@ -6,8 +6,10 @@
 #include "ble_scan.h"
 #include "hal.h"
 #include "ir_tool.h"
+#include "motion.h"
 #include "registry.h"
 #include "tools_screen.h"
+#include "wifi_monitor.h"
 #include "wifi_scan.h"
 
 const char* toolsetLabel(const std::string& t) {
@@ -89,6 +91,12 @@ void registerBuiltinTools() {
   registry.add({"ir.capture", "Learn / Replay", "ir",
                 "Capture and re-send an IR signal",
                 [] { return static_cast<Screen*>(new IrScreen()); }});
+  registry.add({"wifi.monitor", "Packet Monitor", "wifi",
+                "Promiscuous 802.11 frame counts",
+                [] { return static_cast<Screen*>(new WifiMonitorScreen()); }});
+  registry.add({"sensors.motion", "Motion / Tamper", "sensors",
+                "BMI270 movement watch",
+                [] { return static_cast<Screen*>(new MotionScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }
