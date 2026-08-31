@@ -86,8 +86,11 @@ pipeline when it exists.
 - Everything Pi-side, edge-side, and non-StickS3-device is **deferred**. The
   current milestone is the StickS3 firmware + its local web UI.
 - `docs/mcp/` contracts + capability declaration are the integration seam.
-- Repo layout: firmware stays `ry-ops/sferic`. The Pi collector is likely a
-  separate repo or a `server/` directory — decided when it starts.
+- Repo layout: this firmware is `ry-ops/sferic-sticks3` (renamed from
+  `ry-ops/sferic` on 2026-08-31); the collector is its own repo
+  `ry-ops/sferic-collector` (ADR-0003). Future per-device firmware follows
+  `ry-ops/sferic-<device>`. A dedicated `sferic` org is planned. See
+  ADR-0002's 2026-08-31 update.
 
 ## Alternatives considered
 

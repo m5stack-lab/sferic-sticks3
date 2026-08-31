@@ -76,3 +76,16 @@ sferic flash <id>        inspect / export a flash
 - `README`, `platformio.ini` env name, and the on-screen title get the
   `sferic` name on the next pass.
 - Accept the low-grade `sferik` search collision as a known cost.
+
+## Update — 2026-08-31
+
+`sferic` is now a **multi-repo project**, so the repos are scoped by role:
+
+| Repo | Contents |
+|---|---|
+| `ry-ops/sferic-sticks3` | this firmware (renamed from `ry-ops/sferic`) |
+| `ry-ops/sferic-collector` | the companion MCP server / collector (ADR-0003) |
+| `ry-ops/sferic-<device>` | future per-device firmware (Cardputer, Tab5, …) |
+
+A dedicated `sferic` GitHub org is planned; the repos move there then. The
+`sferic` *name*, vocabulary, and CLI surface above are unchanged.
