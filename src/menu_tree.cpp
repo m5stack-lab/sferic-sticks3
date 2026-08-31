@@ -5,9 +5,11 @@
 
 #include "ble_scan.h"
 #include "ble_spam.h"
+#include "evil_portal.h"
 #include "hal.h"
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
+#include "mic_spectrum.h"
 #include "motion.h"
 #include "registry.h"
 #include "tools_screen.h"
@@ -109,6 +111,12 @@ void registerBuiltinTools() {
   registry.add({"ble.spam", "Spam Detect", "ble",
                 "Flag BLE advertising floods",
                 [] { return static_cast<Screen*>(new BleSpamScreen()); }});
+  registry.add({"sensors.mic", "Mic Spectrum", "sensors",
+                "Live FFT of the ES8311 mic",
+                [] { return static_cast<Screen*>(new MicSpectrumScreen()); }});
+  registry.add({"wifi.portal", "Evil Portal", "wifi",
+                "Open AP + captive login capture (authorized testing)",
+                [] { return static_cast<Screen*>(new EvilPortalScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

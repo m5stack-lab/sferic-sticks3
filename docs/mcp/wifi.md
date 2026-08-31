@@ -85,10 +85,13 @@ Sketches only; params/returns firm up when each is built.
 the captured EAPOL frames + beacon; `{ flash_id, complete: bool }`. Passive
 capture only; no on-device cracking.
 
-### `wifi.portal`
+## `wifi.portal`  — implemented (firmware: Evil Portal)
 
-`{ station, ssid, template, duration_ms }` → `{ flash_id, submissions: N }`.
-For authorized phishing-resistance testing only (ADR-0001 scope).
+`{ station, ssid, duration_ms }` → open SoftAP + catch-all DNS + a generic
+captive login page. Submissions land in `{ captures: [{ field1, field2,
+ms }] }` (kept on-device, RAM only, never forwarded). Generic page, not
+brand-impersonating. Authorized phishing-resistance testing only
+(ADR-0001 scope).
 
 ---
 

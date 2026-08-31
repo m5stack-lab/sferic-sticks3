@@ -38,8 +38,10 @@ Watch the IMU for movement above a threshold; emit a strike per event.
 
 - **`sensors.imu_read`** — `{ station }` → one instantaneous
   `{ accel:[x,y,z], gyro:[x,y,z], temp }`.
-- **`sensors.mic_spectrum`** — `{ station, duration_ms }` → FFT frames or a
-  peak-frequency summary from the ES8311 mic.
+### `sensors.mic`  — implemented (firmware: Mic Spectrum)
+
+`{ station, duration_ms }` → `{ peak_hz, peak_mag, bins?[] }` — a 256-pt
+FFT of the ES8311 mic at 16 kHz (62.5 Hz bins, 8 kHz Nyquist).
 
 ---
 
