@@ -14,6 +14,9 @@
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
 #include "mic_spectrum.h"
+#include "usb_hid.h"
+#include "wardrive.h"
+#include "wifi_deauth.h"
 #include "wifi_handshake.h"
 #include "motion.h"
 #include "registry.h"
@@ -135,6 +138,17 @@ void registerBuiltinTools() {
   registry.add({"ble.hid", "HID Keyboard", "ble",
                 "Advertise as a BLE keyboard, type a payload",
                 [] { return static_cast<Screen*>(new BleHidScreen()); }});
+  registry.add({"wifi.wardrive", "Wardrive", "wifi",
+                "AP log + gyro bearing, CSV export",
+                [] { return static_cast<Screen*>(new WardriveScreen()); }});
+  registry.add({"wifi.deauth", "Deauth Detector", "wifi",
+                "Passive deauth/disassoc watch",
+                [] { return static_cast<Screen*>(new WifiDeauthScreen()); }});
+#ifdef SFERIC_USB_HID
+  registry.add({"usb.hid", "HID Keyboard", "usb",
+                "USB keystroke injection (ADR-0005 build)",
+                [] { return static_cast<Screen*>(new UsbHidScreen()); }});
+#endif
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }
