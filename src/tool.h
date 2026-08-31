@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 
+#include "toolset_label.h"
 #include "ui.h"
 
 // A registered tool (ADR-0004). Data + a factory for its on-device view, plus
@@ -21,6 +22,3 @@ struct Tool {
   // on-device arm/confirm guard. Menu, web, and MCP all dispatch through this.
   std::function<std::string(const std::string&)> run;
 };
-
-// Display label for a toolset id.
-const char* toolsetLabel(const std::string& toolset);

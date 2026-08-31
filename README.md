@@ -85,6 +85,7 @@ src/confirm.h    two-step arm/confirm guard
 src/<tool>.*     one screen per tool
 docs/adr/        architecture decision records (0001–0007)
 docs/mcp/        per-toolset MCP contracts + strike/pcap formats
+test/            host unit tests — `pio test -e native`
 ```
 
 ## Status

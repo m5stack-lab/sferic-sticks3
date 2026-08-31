@@ -21,10 +21,13 @@ protocol specs, and your own implementation are fine.
 ```sh
 pio run -e sferic            # default build (must pass)
 pio run -e sferic-usbhid     # HID variant (must pass)
+pio test -e native           # host unit tests (must pass)
 ```
 
-CI builds both envs on every push and PR; keep it green. There is no host
-test suite yet — if you add hardware-independent logic, add one.
+CI runs all three on every push and PR; keep it green. The `native` env
+builds only dependency-free sources (`test_build_src` + `build_src_filter`
+in `platformio.ini`) — keep hardware-independent logic that way and add a
+test for it in `test/test_main.cpp`.
 
 ## Adding a tool
 
