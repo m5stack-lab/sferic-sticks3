@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "hal.h"
+#include "wifi_scan.h"
 
 namespace {
 
@@ -23,7 +24,7 @@ MenuItem submenu(const char* label, std::vector<MenuItem> items) {
 std::string aboutText() {
   char buf[256];
   std::snprintf(buf, sizeof(buf),
-                "StickS3 multitool\nMIT licensed\n\n"
+                "sferic\nStickS3 multitool  MIT\n\n"
                 "PSRAM  %u KB\nheap   %u KB\nLCD    %dx%d\nbatt   %d%%\n"
                 "power  %s\n\nA=next A(hold)=prev\nB=select B(hold)=back",
                 (unsigned)(hal.psramBytes() / 1024),
@@ -36,11 +37,11 @@ std::string aboutText() {
 
 Screen* makeRootMenu() {
   return new MenuScreen(
-      "StickS3",
+      "sferic",
       {
           submenu("WiFi",
                   {
-                      stub("AP Scan"),
+                      {"AP Scan", [] { ui.push(new WifiScanScreen()); }},
                       stub("Packet Monitor"),
                       stub("Probe / Beacon"),
                       stub("Handshake Capture"),

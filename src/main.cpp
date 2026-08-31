@@ -8,7 +8,7 @@ void setup() {
   hal.begin();
   Serial.begin(115200);
   ui.push(makeRootMenu());
-  Serial.println("\n[shell] up  (serial nav: a=next A=prev b=select B=back)");
+  Serial.println("\n[sferic] up  (serial nav: a=next A=prev b=select B=back)");
 }
 
 void loop() {
