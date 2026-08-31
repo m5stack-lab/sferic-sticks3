@@ -67,8 +67,11 @@ when resent via the protocol, `raw` when replayed from the timing buffer.
 
 - **`ir.decode`** — `{ station, timeout_ms }` → the decoded result only, not
   stored (a peek).
-- **`ir.tvbgone`** — `{ station, region? }` → sweeps common TV power codes;
-  returns `{ codes_sent: N }`.
+### `ir.tvbgone`  — implemented
+
+`{ station, repeats? }` → sweeps a built-in set of common TV power codes
+(Samsung/LG/Sony/Toshiba/Vizio/TCL/Philips/Panasonic/...); returns
+`{ codes_sent: 14 }`. Best-effort by design.
 
 ---
 

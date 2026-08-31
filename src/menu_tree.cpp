@@ -6,6 +6,7 @@
 #include "ble_scan.h"
 #include "hal.h"
 #include "ir_tool.h"
+#include "ir_tvbgone.h"
 #include "motion.h"
 #include "registry.h"
 #include "tools_screen.h"
@@ -97,6 +98,9 @@ void registerBuiltinTools() {
   registry.add({"sensors.motion", "Motion / Tamper", "sensors",
                 "BMI270 movement watch",
                 [] { return static_cast<Screen*>(new MotionScreen()); }});
+  registry.add({"ir.tvbgone", "TV-B-Gone", "ir",
+                "Sweep common TV power codes",
+                [] { return static_cast<Screen*>(new TvBGoneScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

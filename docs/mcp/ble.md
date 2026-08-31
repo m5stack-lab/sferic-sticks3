@@ -47,11 +47,13 @@ descending.
 
 Sketches only.
 
-### `ble.decode`
+### `ble.decode`  — implemented on-device as the scan detail view
 
-`{ station, address, duration_ms }` → full advertisement breakdown for one
-device: raw AD structures, decoded iBeacon / Eddystone / manufacturer data,
-all service data, TX power.
+On the device, B on a scanned device opens a decode panel: address + type,
+name, RSSI, connectable, adv flags, appearance, service UUIDs, manufacturer
+data (company id + hex), and iBeacon parse (UUID / major / minor / tx).
+MCP form: `{ station, address }` → the same fields as a struct. Eddystone
+decode still TODO.
 
 ### `ble.spam_watch`
 
