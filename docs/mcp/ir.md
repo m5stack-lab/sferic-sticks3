@@ -65,8 +65,13 @@ when resent via the protocol, `raw` when replayed from the timing buffer.
 
 ## Planned (firmware stubs — ADR-0001)
 
-- **`ir.decode`** — `{ station, timeout_ms }` → the decoded result only, not
-  stored (a peek).
+## `ir.decode`  — implemented (firmware: Protocol Decode)
+
+`{ station, duration_ms }` → a stream / list of decoded hits
+`{ protocol, value, bits }` (or `{ raw: <samples> }` when undecodable),
+not stored. A continuous peek.
+
+## Planned (ADR-0001)
 ### `ir.tvbgone`  — implemented
 
 `{ station, repeats? }` → sweeps a built-in set of common TV power codes

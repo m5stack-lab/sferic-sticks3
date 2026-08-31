@@ -4,11 +4,13 @@
 #include <vector>
 
 #include "ble_scan.h"
+#include "ble_hid.h"
 #include "ble_spam.h"
 #include "capture_screen.h"
 #include "evil_portal.h"
 #include "gesture.h"
 #include "hal.h"
+#include "ir_decode.h"
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
 #include "mic_spectrum.h"
@@ -127,6 +129,12 @@ void registerBuiltinTools() {
   registry.add({"wifi.handshake", "Handshake Capture", "wifi",
                 "Passive EAPOL capture to pcap",
                 [] { return static_cast<Screen*>(new WifiHandshakeScreen()); }});
+  registry.add({"ir.decode", "Protocol Decode", "ir",
+                "Continuous IR decode (peek, no store)",
+                [] { return static_cast<Screen*>(new IrDecodeScreen()); }});
+  registry.add({"ble.hid", "HID Keyboard", "ble",
+                "Advertise as a BLE keyboard, type a payload",
+                [] { return static_cast<Screen*>(new BleHidScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

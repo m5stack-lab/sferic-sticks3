@@ -71,11 +71,12 @@ readable characteristics are read once. Disconnects after.
 
 ## Planned (ADR-0001)
 
-### `ble.hid`
+## `ble.hid`  — implemented (firmware: HID Keyboard)
 
-Act as a BLE HID peripheral (keyboard/mouse) toward a paired host — likely
-its own interaction model rather than a single call. Authorized input
-testing only.
+Advertises as a BLE keyboard (`sferic-kb`, appearance HID keyboard). Once a
+host pairs, `{ station, text }` types `text` as key events (boot-keyboard
+8-byte reports, ascii subset: letters, digits, space, newline, `.-_`).
+Authorized input testing only (ADR-0001).
 
 ---
 
