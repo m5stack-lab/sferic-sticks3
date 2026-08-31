@@ -3,6 +3,8 @@
 MIT-licensed ESP32-S3 hardware / radio multitool firmware for the **M5Stack
 StickS3**. Bruce is a design reference, not a fork ([ADR-0001](docs/adr/0001-onboard-rf-and-tool-capabilities.md)).
 
+A sferic (short for atmospheric radio wave) is a natural radio frequency emission caused by lightning.
+
 The architecture is a **lightning-detection network**: distributed
 *stations* (M5 devices) capture RF impulses; a central collector correlates
 them. Vocabulary follows the field — station, **strike** (one event),
