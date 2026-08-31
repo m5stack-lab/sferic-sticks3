@@ -61,6 +61,18 @@ void drawHint(const char* s) {
 MenuScreen::MenuScreen(std::string title, std::vector<MenuItem> items)
     : title_(std::move(title)), items_(std::move(items)) {}
 
+MenuScreen::MenuScreen(std::string title,
+                       std::function<std::vector<MenuItem>()> build)
+    : title_(std::move(title)), build_(std::move(build)) {}
+
+void MenuScreen::onEnter() {
+  if (build_) {
+    items_ = build_();
+    if (sel_ >= (int)items_.size()) sel_ = items_.empty() ? 0 : items_.size() - 1;
+  }
+  dirty_ = true;
+}
+
 void MenuScreen::tick() {
   const BtnEvent a = hal.event(Btn::A);
   const BtnEvent b = hal.event(Btn::B);

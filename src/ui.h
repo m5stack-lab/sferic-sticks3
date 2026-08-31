@@ -49,12 +49,16 @@ struct MenuItem {
 class MenuScreen : public Screen {
  public:
   MenuScreen(std::string title, std::vector<MenuItem> items);
-  void onEnter() override { dirty_ = true; }
+  // Live menu: `build` is re-run on every onEnter, so toggles elsewhere
+  // (e.g. Settings > Tools) take effect when you return to this screen.
+  MenuScreen(std::string title, std::function<std::vector<MenuItem>()> build);
+  void onEnter() override;
   void tick() override;
 
  private:
   std::string title_;
   std::vector<MenuItem> items_;
+  std::function<std::vector<MenuItem>()> build_;
   int sel_ = 0;
   int top_ = 0;  // first visible row
   bool dirty_ = true;

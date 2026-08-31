@@ -1,87 +1,94 @@
 #include "menu_tree.h"
 
 #include <cstdio>
+#include <vector>
 
 #include "ble_scan.h"
 #include "hal.h"
 #include "ir_tool.h"
+#include "registry.h"
+#include "tools_screen.h"
 #include "wifi_scan.h"
 
+const char* toolsetLabel(const std::string& t) {
+  if (t == "wifi") return "WiFi";
+  if (t == "ble") return "Bluetooth";
+  if (t == "ir") return "Infrared";
+  if (t == "usb") return "USB";
+  if (t == "sensors") return "Sensors";
+  if (t == "subghz") return "SubGHz";
+  if (t == "nrf24") return "2.4GHz";
+  return t.c_str();
+}
+
 namespace {
-
-// Push a "not implemented yet" screen for a leaf tool.
-MenuItem stub(const char* label) {
-  std::string name = label;
-  return {name, [name] {
-            ui.push(new InfoScreen(name, name + "\n\nNot implemented yet.\n\n"
-                                               "Tracked in ADR-0001."));
-          }};
-}
-
-MenuItem submenu(const char* label, std::vector<MenuItem> items) {
-  std::string name = label;
-  return {name, [name, items] { ui.push(new MenuScreen(name, items)); }};
-}
 
 std::string aboutText() {
   char buf[256];
   std::snprintf(buf, sizeof(buf),
                 "sferic\nStickS3 multitool  MIT\n\n"
                 "PSRAM  %u KB\nheap   %u KB\nLCD    %dx%d\nbatt   %d%%\n"
-                "power  %s\n\nA=next A(hold)=prev\nB=select B(hold)=back",
+                "power  %s\n\nA=next  A(hold)=prev\nB=select  B(hold)=back",
                 (unsigned)(hal.psramBytes() / 1024),
                 (unsigned)(hal.freeHeap() / 1024), hal.w(), hal.h(),
                 hal.battPercent(), hal.onUsb() ? "USB" : "battery");
   return buf;
 }
 
+// A toolset submenu, rebuilt from the registry each time it is opened.
+std::vector<MenuItem> buildToolset(const std::string& tsid) {
+  std::vector<MenuItem> items;
+  for (const auto& t : registry.all()) {
+    if (t.toolset != tsid || !registry.enabled(t.id)) continue;
+    auto make = t.make;
+    items.push_back({t.name, [make] { ui.push(make()); }});
+  }
+  if (items.empty()) items.push_back({"(all disabled)", [] {}});
+  return items;
+}
+
+std::vector<MenuItem> buildRoot() {
+  std::vector<MenuItem> root;
+  for (const auto& ts : registry.toolsets()) {
+    bool any = false;
+    for (const auto& t : registry.all())
+      if (t.toolset == ts && registry.enabled(t.id)) {
+        any = true;
+        break;
+      }
+    if (!any) continue;  // hide a fully-disabled toolset
+
+    const std::string label = toolsetLabel(ts);
+    const std::string tsid = ts;
+    root.push_back({label, [label, tsid] {
+                      ui.push(new MenuScreen(
+                          label, [tsid] { return buildToolset(tsid); }));
+                    }});
+  }
+  root.push_back({"Settings", [] {
+                   ui.push(new MenuScreen(
+                       "Settings",
+                       std::vector<MenuItem>{
+                           {"Tools", [] { ui.push(new ToolsScreen()); }},
+                           {"About", [] {
+                              ui.push(new InfoScreen("About", aboutText()));
+                            }},
+                       }));
+                 }});
+  return root;
+}
+
 }  // namespace
 
-Screen* makeRootMenu() {
-  return new MenuScreen(
-      "sferic",
-      {
-          submenu("WiFi",
-                  {
-                      {"AP Scan", [] { ui.push(new WifiScanScreen()); }},
-                      stub("Packet Monitor"),
-                      stub("Probe / Beacon"),
-                      stub("Handshake Capture"),
-                      stub("Evil Portal"),
-                      stub("Wardrive Log"),
-                  }),
-          submenu("Bluetooth",
-                  {
-                      {"BLE Scan", [] { ui.push(new BleScanScreen()); }},
-                      stub("Advertisement Decode"),
-                      stub("Spam Detect"),
-                      stub("BLE HID"),
-                  }),
-          submenu("Infrared",
-                  {
-                      {"Learn / Replay", [] { ui.push(new IrScreen()); }},
-                      stub("Protocol Decode"),
-                      stub("TV-B-Gone"),
-                  }),
-          submenu("USB", {stub("Keystroke Injection")}),
-          submenu("Sensors",
-                  {
-                      stub("Motion / Tamper"),
-                      stub("Gesture Nav"),
-                      stub("Mic Spectrum"),
-                  }),
-          submenu("RF Pack",
-                  {
-                      stub("SubGHz Scan"),
-                      stub("SubGHz Capture / Replay"),
-                      stub("433 Sensor Decode"),
-                      stub("2.4GHz Band Scan"),
-                      stub("nRF24 Sniffer"),
-                  }),
-          submenu("Settings",
-                  {
-                      stub("Backlight"),
-                      {"About", [] { ui.push(new InfoScreen("About", aboutText())); }},
-                  }),
-      });
+void registerBuiltinTools() {
+  registry.add({"wifi.scan", "AP Scan", "wifi", "Scan 2.4GHz access points",
+                [] { return static_cast<Screen*>(new WifiScanScreen()); }});
+  registry.add({"ble.scan", "BLE Scan", "ble",
+                "List advertising BLE devices",
+                [] { return static_cast<Screen*>(new BleScanScreen()); }});
+  registry.add({"ir.capture", "Learn / Replay", "ir",
+                "Capture and re-send an IR signal",
+                [] { return static_cast<Screen*>(new IrScreen()); }});
 }
+
+Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

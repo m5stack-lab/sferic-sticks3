@@ -25,14 +25,16 @@ void Hal::poll(BtnState& s, bool raw, uint32_t now) {
 }
 
 void Hal::pollSerial() {
-  while (Serial.available()) {
-    switch (Serial.read()) {
-      case 'a': a_.pending = BtnEvent::Click; break;
-      case 'A': a_.pending = BtnEvent::Hold; break;
-      case 'b': b_.pending = BtnEvent::Click; break;
-      case 'B': b_.pending = BtnEvent::Hold; break;
-      default: break;
-    }
+  // One nav char per frame, and only once the last event has been consumed,
+  // so a burst of chars produces one press each instead of collapsing.
+  if (!Serial.available()) return;
+  if (a_.pending != BtnEvent::None || b_.pending != BtnEvent::None) return;
+  switch (Serial.read()) {
+    case 'a': a_.pending = BtnEvent::Click; break;
+    case 'A': a_.pending = BtnEvent::Hold; break;
+    case 'b': b_.pending = BtnEvent::Click; break;
+    case 'B': b_.pending = BtnEvent::Hold; break;
+    default: break;
   }
 }
 

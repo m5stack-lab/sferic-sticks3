@@ -63,3 +63,7 @@ advertising flood (spoofed-device spam): `{ ts, pattern, rate, sample_addrs }`.
 Act as a BLE HID peripheral (keyboard/mouse) toward a paired host — likely
 its own interaction model rather than a single call. Authorized input
 testing only.
+
+---
+
+**Registry (ADR-0004):** the server's `tools/list` returns this toolset's tools only when they are enabled on the target station. Calling a disabled tool returns `capability_disabled` (vs `capability_not_present` = the station's hardware can't do it at all). `sferic.tool_enable` / `sferic.tool_disable` flip the state.

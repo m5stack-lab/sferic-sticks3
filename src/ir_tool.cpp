@@ -40,6 +40,7 @@ void IrScreen::onExit() {
 
 void IrScreen::arm() {
   strike_ = Strike{};
+  g_recv->disableIRIn();  // clean slate when re-arming
   g_recv->enableIRIn();
   g_recv->resume();
   mode_ = Mode::Listening;

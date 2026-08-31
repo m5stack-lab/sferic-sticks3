@@ -69,3 +69,7 @@ capture only; no on-device cracking.
 
 `{ station, ssid, template, duration_ms }` → `{ flash_id, submissions: N }`.
 For authorized phishing-resistance testing only (ADR-0001 scope).
+
+---
+
+**Registry (ADR-0004):** the server's `tools/list` returns this toolset's tools only when they are enabled on the target station. Calling a disabled tool returns `capability_disabled` (vs `capability_not_present` = the station's hardware can't do it at all). `sferic.tool_enable` / `sferic.tool_disable` flip the state.

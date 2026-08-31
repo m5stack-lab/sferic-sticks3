@@ -2,8 +2,10 @@
 
 #include "ui.h"
 
-// Builds the root menu with the tool categories from
-// docs/adr/0001-onboard-rf-and-tool-capabilities.md. Every leaf is a stub
-// InfoScreen for now; a real tool replaces the action with `ui.push(new
-// SomeToolScreen())`.
+// Populate the registry with the built-in tools (ADR-0004). Call once at
+// startup, after registry.begin().
+void registerBuiltinTools();
+
+// The root menu — built live from the registry, so tool on/off toggles
+// (Settings > Tools) take effect on the next visit.
 Screen* makeRootMenu();

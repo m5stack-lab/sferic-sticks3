@@ -69,3 +69,7 @@ when resent via the protocol, `raw` when replayed from the timing buffer.
   stored (a peek).
 - **`ir.tvbgone`** — `{ station, region? }` → sweeps common TV power codes;
   returns `{ codes_sent: N }`.
+
+---
+
+**Registry (ADR-0004):** the server's `tools/list` returns this toolset's tools only when they are enabled on the target station. Calling a disabled tool returns `capability_disabled` (vs `capability_not_present` = the station's hardware can't do it at all). `sferic.tool_enable` / `sferic.tool_disable` flip the state.

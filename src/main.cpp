@@ -2,13 +2,19 @@
 
 #include "hal.h"
 #include "menu_tree.h"
+#include "registry.h"
 #include "ui.h"
 
 void setup() {
   hal.begin();
   Serial.begin(115200);
+  registry.begin();        // load per-tool enabled state from NVS
+  registerBuiltinTools();  // ADR-0004
   ui.push(makeRootMenu());
-  Serial.println("\n[sferic] up  (serial nav: a=next A=prev b=select B=back)");
+  Serial.printf("\n[sferic] up  %d tools\n", (int)registry.all().size());
+  for (const auto& t : registry.all())
+    Serial.printf("[tool] %-12s %s\n", t.id.c_str(),
+                  registry.enabled(t.id) ? "on" : "off");
 }
 
 void loop() {
