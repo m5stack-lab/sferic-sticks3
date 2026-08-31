@@ -93,3 +93,33 @@ StickS3 firmware + local web UI, with screen sleep and the headless
 `run()` seam in place (sensors only so far — radio tools get their headless
 path on the collector). Not built yet: the MCP server (Pi 5 collector),
 RF Pack S3 drivers (SubGHz / nRF24 — waiting on hardware).
+
+## Releases
+
+Versioned by `SFERIC_VERSION` in `src/version.h`. Pushing a `vX.Y.Z` tag on
+`main` runs CI for both envs and publishes a [GitHub
+Release](https://github.com/ry-ops/sferic/releases) with `sferic-<tag>.bin`
+(default USB-Serial/JTAG build) and `sferic-usbhid-<tag>.bin` (TinyUSB
+HID build) attached, plus auto-generated notes.
+
+```sh
+git tag -a v0.1.0 -m "sferic v0.1.0"
+git push origin v0.1.0
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Short version: clean-room only (no
+Bruce/GPL code), design changes carry an ADR, branch + PR off `main`, keep
+both `pio run` envs green, no secrets.
+
+## Contributors
+
+- **[ry-ops](https://github.com/ry-ops)** — author / maintainer
+
+Firmware co-authored with [Claude Code](https://claude.com/claude-code)
+(trailers on the commits).
+
+## License
+
+[MIT](LICENSE) © 2026 ry-ops

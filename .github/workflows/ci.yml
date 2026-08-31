@@ -41,7 +41,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { path: dist }
+      - name: Stage release assets
+        run: |
+          mkdir -p out
+          cp dist/sferic-firmware/firmware.bin        "out/sferic-${{ github.ref_name }}.bin"
+          cp dist/sferic-usbhid-firmware/firmware.bin  "out/sferic-usbhid-${{ github.ref_name }}.bin"
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/**/firmware.bin
+          files: out/*.bin
+          generate_release_notes: true
           fail_on_unmatched_files: false
