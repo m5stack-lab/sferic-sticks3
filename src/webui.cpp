@@ -132,6 +132,8 @@ void WebUiScreen::onEnter() {
   g_reqs = 0;
   WiFi.mode(WIFI_AP);
   WiFi.softAP(kSsid);
+  WiFi.setSleep(false);  // AP modem-sleep makes the SSID flicker in/out of
+                         // client scan lists and stalls connects
   const IPAddress ip = WiFi.softAPIP();
 
   g_dns = new DNSServer();

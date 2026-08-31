@@ -54,6 +54,7 @@ void EvilPortalScreen::onEnter() {
   dirty_ = true;
   WiFi.mode(WIFI_AP);
   WiFi.softAP(kSsids[ssidIdx_]);
+  WiFi.setSleep(false);  // keep the beacon steady (see webui.cpp)
   const IPAddress ip = WiFi.softAPIP();
 
   g_dns = new DNSServer();
