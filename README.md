@@ -90,7 +90,7 @@ src/pcap.*       PSRAM pcap capture buffer
 src/confirm.h    two-step arm/confirm guard
 src/<tool>.*     one screen per tool
 web/             web UI sources -> src/webui_html.h via scripts/gen_webui.py
-docs/adr/        architecture decision records (0001–0007)
+docs/adr/        architecture decision records (0001–0008)
 docs/mcp/        per-toolset MCP contracts + strike/pcap formats
 test/            host unit tests — `pio test -e native`
 ```
