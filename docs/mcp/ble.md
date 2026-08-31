@@ -55,10 +55,12 @@ data (company id + hex), and iBeacon parse (UUID / major / minor / tx).
 MCP form: `{ station, address }` → the same fields as a struct. Eddystone
 decode still TODO.
 
-### `ble.spam_watch`
+### `ble.spam`  — implemented (firmware: Spam Detect)
 
-`{ station, duration_ms }` → a **flash** of strikes, one per detected
-advertising flood (spoofed-device spam): `{ ts, pattern, rate, sample_addrs }`.
+`{ station, duration_ms }` → per-second `{ adv_rate, new_addr_rate,
+peak_new_addr, verdict }` where verdict ∈ QUIET / BUSY / SPAM (SPAM =
+adv_rate > 80/s and new_addr_rate > 40/s — an address-rotating flood).
+Strike-per-flood output lands with the headless path.
 
 ### `ble.hid`
 

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ble_scan.h"
+#include "ble_spam.h"
 #include "hal.h"
 #include "ir_tool.h"
 #include "ir_tvbgone.h"
@@ -11,6 +12,7 @@
 #include "registry.h"
 #include "tools_screen.h"
 #include "wifi_monitor.h"
+#include "wifi_probe.h"
 #include "wifi_scan.h"
 
 const char* toolsetLabel(const std::string& t) {
@@ -101,6 +103,12 @@ void registerBuiltinTools() {
   registry.add({"ir.tvbgone", "TV-B-Gone", "ir",
                 "Sweep common TV power codes",
                 [] { return static_cast<Screen*>(new TvBGoneScreen()); }});
+  registry.add({"wifi.probe", "Probe / Beacon", "wifi",
+                "Collect probe requests (who wants what SSID)",
+                [] { return static_cast<Screen*>(new WifiProbeScreen()); }});
+  registry.add({"ble.spam", "Spam Detect", "ble",
+                "Flag BLE advertising floods",
+                [] { return static_cast<Screen*>(new BleSpamScreen()); }});
 }
 
 Screen* makeRootMenu() { return new MenuScreen("sferic", buildRoot); }

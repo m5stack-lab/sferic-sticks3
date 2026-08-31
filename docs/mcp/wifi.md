@@ -73,10 +73,11 @@ addr2, addr3, rssi, len }`.
 
 Sketches only; params/returns firm up when each is built.
 
-### `wifi.probes`
+## `wifi.probe`  — implemented (firmware: Probe / Beacon)
 
-`{ station, duration_ms }` → `{ clients: [{ mac, oui, probed_ssids: [...],
-last_seen, count }] }`.
+`{ station, duration_ms }`, auto-hops channels → `{ clients: [{ mac,
+probed_ssid, rssi, count, last_seen }] }` (one entry per unique mac+ssid;
+empty ssid = wildcard probe).
 
 ### `wifi.handshake` — EAPOL capture → flash
 

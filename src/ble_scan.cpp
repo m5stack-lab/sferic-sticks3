@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include "ble_common.h"
 #include "hal.h"
 
 namespace {
@@ -21,8 +22,7 @@ uint16_t rssiColor(int rssi) {
 void BleScanScreen::onEnter() {
   dirty_ = true;
   if (started_) return;
-  NimBLEDevice::init("");
-  scan_ = NimBLEDevice::getScan();
+  scan_ = bleScan();
   scan_->setActiveScan(true);
   scan_->setMaxResults(48);
   scan_->setInterval(45);
@@ -35,8 +35,7 @@ void BleScanScreen::onEnter() {
 
 void BleScanScreen::onExit() {
   if (!started_) return;
-  if (scan_) scan_->stop();
-  NimBLEDevice::deinit(true);  // free the BLE stack for other tools
+  bleStop();
   scan_ = nullptr;
   started_ = false;
 }
