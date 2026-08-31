@@ -22,6 +22,7 @@ class PcapBuffer {
   size_t capacity() const { return cap_; }
   uint32_t frames() const { return frames_; }
   bool full() const { return full_; }
+  const uint8_t* raw() const { return buf_; }  // for the HTTP binary download
 
   // Dump the whole buffer base64-framed between markers, for a host to save.
   void dumpBase64(Print& out) const;

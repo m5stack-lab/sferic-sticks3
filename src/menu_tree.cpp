@@ -16,6 +16,7 @@
 #include "mic_spectrum.h"
 #include "usb_hid.h"
 #include "wardrive.h"
+#include "webui.h"
 #include "wifi_deauth.h"
 #include "wifi_handshake.h"
 #include "motion.h"
@@ -86,6 +87,7 @@ std::vector<MenuItem> buildRoot() {
                        std::vector<MenuItem>{
                            {"Tools", [] { ui.push(new ToolsScreen()); }},
                            {"Capture", [] { ui.push(new CaptureScreen()); }},
+                           {"Web UI", [] { ui.push(new WebUiScreen()); }},
                            {"About", [] {
                               ui.push(new InfoScreen("About", aboutText()));
                             }},
