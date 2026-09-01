@@ -93,10 +93,42 @@ need an explicit confirm token (ADR-0008 §1).
 <{"id":5,"ok":true,"enabled":false}
 ```
 
+### `stream_start` / `stream_stop` / `stream_status` — the streaming tools
+
+One background capture session at a time (single radio, single loop). While
+active the station emits `!`-prefixed NDJSON: an `{"event":"open"}` line, one
+strike per event, an `{"event":"close","count"}` line on stop. Strike
+envelope per `strike-format.md` (device `ts` is boot-relative `"t+<ms>"`; the
+collector normalizes on ingest).
+
+```
+>{"id":6,"op":"stream_start","tool":"wifi.monitor","params":{}}
+<{"id":6,"ok":true,"flash":"cf5e10"}
+!{"flash":"cf5e10","event":"open","tool":"wifi.monitor"}
+!{"v":1,"flash":"cf5e10","id":"cf5e10-0","station":"stick-6e27ac","ts":"t+13886",
+  "toolset":"wifi","kind":"monitor",
+  "payload":{"decoded":{"total":92,"mgmt":69,"data":23,"ctrl":0,"rate":83,"rssi":-59}}}
+ …one per second…
+>{"id":7,"op":"stream_stop"}
+!{"flash":"cf5e10","event":"close","count":10}
+<{"id":7,"ok":true,"count":10}
+```
+
+`stream_start` errors: `busy` (a session is already running), `unknown_tool`,
+`capability_disabled`, `start_failed`, `missing_tool`. `stream_stop` on an
+idle channel returns `{"ok":false,"error":"not_streaming"}`. `stream_status`
+→ `{active, tool, flash, count}`.
+
+| tool | strike `kind` | payload |
+|---|---|---|
+| `wifi.monitor` | `monitor` (~1/s) | `{total,mgmt,data,ctrl,rate,rssi}` |
+| `wifi.deauth` | `deauth` (on threshold cross, re-armed once calm) | `{bssid,deauth,disassoc,rate}` |
+| `wifi.handshake` | `eapol` per frame, `handshake` at 4 EAPOL for a BSSID | `{bssid,ssid,rssi,eapol}` / `{bssid,ssid,frames,bytes}` |
+
+`ble.spam`, `sensors.mic`, `wifi.wardrive` follow the same pattern (not yet
+wired).
+
 ## Not yet
 
-Flash `open`/`close` control lines and the NDJSON strike stream
-(`strike-format.md` "on the wire") — added with the first streaming tool's
-headless path. `pcap` pull over serial already exists as the base64
-`---PCAP-BEGIN/END---` export from `Settings > Capture`; a framed `op` for
-it comes later.
+A framed `op` for the pcap buffer (`wifi.handshake` fills it) — pull is still
+the base64 `---PCAP-BEGIN/END---` export from `Settings > Capture`.
