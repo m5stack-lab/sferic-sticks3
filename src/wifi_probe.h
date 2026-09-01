@@ -6,6 +6,11 @@
 
 #include "ui.h"
 
+// Headless bounded probe-request capture (ADR-0004 §4). Hops channels for
+// `windowMs`, blocking. Returns {"total":N,"uniq":M,"probes":[{mac,ssid,
+// rssi,count}]} or {"error":"radio_busy"}. Refuses while the SoftAP is up.
+std::string wifiProbeJson(uint32_t windowMs = 4000);
+
 // WiFi -> Probe / Beacon. Promiscuous capture of probe-request frames:
 // which client is looking for which SSID. Auto-hops channels. A = scroll,
 // A-hold = clear, B-hold = back.

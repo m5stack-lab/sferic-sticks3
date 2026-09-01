@@ -56,20 +56,25 @@ knows what it can launch.
 
 ## What exposes `run` today
 
-| Tool | `run` | Why |
+| Tool | `run` result | Notes |
 |---|---|---|
-| `sensors.motion` | ✅ one-shot IMU read (`imuSnapshot()`) | pure I2C, no radio — safe while the Web UI SoftAP is up |
-| `sensors.gesture` | ✅ same snapshot (orientation `face` + accel/gyro) | same |
-| everything else | ✅ null | needs a radio the SoftAP is using (`wifi.*`, `ble.*`), or emits and must stay behind the on-device arm/confirm guard (`ir.tvbgone`, `ir.capture`, `*.hid`), or has no non-interactive shape yet |
+| `sensors.motion` / `sensors.gesture` | one-shot IMU snapshot (`imuSnapshot()`) | pure I2C, no radio — safe even while the Web UI SoftAP is up |
+| `wifi.scan` | `{count, aps:[{ssid,bssid,rssi,channel,enc}]}` | blocking async scan, `{"ms":…}` param (500–15000, def 4000); `{"error":"radio_busy"}` if the SoftAP is up |
+| `ble.scan` | `{count, devices:[{addr,addr_type,name,rssi,connectable,services}]}` | blocking scan, `{"ms":…}`; BLE + SoftAP coexist so no radio guard |
+| `wifi.probe` | `{total, uniq, probes:[{mac,ssid,rssi,count}]}` | channel-hops for `{"ms":…}` (1000–20000, def 4000), blocking; `radio_busy` guard |
+| `ir.decode` | `{protocol,value,bits}` \| `{protocol:"RAW",samples}` \| `{error:"timeout"}` | listens up to `{"ms":…}` (200–15000, def 3000), blocking; GPIO RX, no radio |
+| everything else | `null` | emits and must stay behind arm/confirm (`ir.tvbgone`, `ir.capture` replay, `*.hid`), or is genuinely streaming (`wifi.monitor`, `wifi.handshake`, `wifi.deauth`, `ble.spam`, `sensors.mic`) and wants a start/stop + strike-stream shape, not one-shot |
 
-Radio tools get their headless path on the **MCP collector** (ADR-0007): the
-station links to the Pi over its station radio, so the SoftAP conflict that
-blocks them from the local web UI doesn't apply there. Emitting tools stay
-gated — headless or not, they need an explicit operator confirm.
+**These `run()`s block `loop()` for their duration** (the UI freezes, the
+serial channel pauses) — acceptable for one-shot scans over the collector
+link; a job/async model comes with the streaming tools.
+
+Emitting tools stay gated regardless of surface — headless or not, firing
+needs an explicit confirm (ADR-0008 §1).
 
 ## Streaming
 
-`run()` is one-shot request/response. Long-running tools (a handshake capture,
-a motion watch) still run as a `Screen` on-device or, later, as an MCP job that
-streams a **flash** of strikes (ADR-0003 §6). `/api/tools/run` is not a
-streaming endpoint.
+`run()` is one-shot request/response. Genuinely long-running tools (handshake
+capture, packet monitor, a motion watch) run as a `Screen` on-device or,
+later, as an MCP job that streams a **flash** of strikes (ADR-0003 §6).
+`/api/tools/run` and the serial `run` op are not streaming endpoints.

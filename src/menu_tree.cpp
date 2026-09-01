@@ -1,8 +1,10 @@
 #include "menu_tree.h"
 
+#include <ArduinoJson.h>
 #include <M5Unified.h>
 #include <math.h>
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -54,6 +56,15 @@ std::string imuSnapshot() {
                 "\"gyro_dps\":%.1f,\"moving\":%s,\"face\":\"%s\"}",
                 ax, ay, az, aDev, gMag, moving ? "true" : "false", face);
   return buf;
+}
+
+// Pull an optional {"ms": <int>} out of a headless params string, clamped.
+uint32_t paramMs(const std::string& p, uint32_t def, uint32_t lo, uint32_t hi) {
+  JsonDocument d;
+  if (deserializeJson(d, p) != DeserializationError::Ok) return def;
+  if (!d["ms"].is<uint32_t>()) return def;
+  uint32_t ms = d["ms"];
+  return ms < lo ? lo : (ms > hi ? hi : ms);
 }
 
 std::string aboutText() {
@@ -118,10 +129,16 @@ std::vector<MenuItem> buildRoot() {
 
 void registerBuiltinTools() {
   registry.add({"wifi.scan", "AP Scan", "wifi", "Scan 2.4GHz access points",
-                [] { return static_cast<Screen*>(new WifiScanScreen()); }});
+                [] { return static_cast<Screen*>(new WifiScanScreen()); },
+                [](const std::string& p) {
+                  return wifiScanJson(paramMs(p, 4000, 500, 15000));
+                }});
   registry.add({"ble.scan", "BLE Scan", "ble",
                 "List advertising BLE devices",
-                [] { return static_cast<Screen*>(new BleScanScreen()); }});
+                [] { return static_cast<Screen*>(new BleScanScreen()); },
+                [](const std::string& p) {
+                  return bleScanJson(paramMs(p, 4000, 500, 15000));
+                }});
   registry.add({"ir.capture", "Learn / Replay", "ir",
                 "Capture and re-send an IR signal",
                 [] { return static_cast<Screen*>(new IrScreen()); }});
@@ -137,7 +154,10 @@ void registerBuiltinTools() {
                 [] { return static_cast<Screen*>(new TvBGoneScreen()); }});
   registry.add({"wifi.probe", "Probe / Beacon", "wifi",
                 "Collect probe requests (who wants what SSID)",
-                [] { return static_cast<Screen*>(new WifiProbeScreen()); }});
+                [] { return static_cast<Screen*>(new WifiProbeScreen()); },
+                [](const std::string& p) {
+                  return wifiProbeJson(paramMs(p, 4000, 1000, 20000));
+                }});
   registry.add({"ble.spam", "Spam Detect", "ble",
                 "Flag BLE advertising floods",
                 [] { return static_cast<Screen*>(new BleSpamScreen()); }});
@@ -156,7 +176,10 @@ void registerBuiltinTools() {
                 [] { return static_cast<Screen*>(new WifiHandshakeScreen()); }});
   registry.add({"ir.decode", "Protocol Decode", "ir",
                 "Continuous IR decode (peek, no store)",
-                [] { return static_cast<Screen*>(new IrDecodeScreen()); }});
+                [] { return static_cast<Screen*>(new IrDecodeScreen()); },
+                [](const std::string& p) {
+                  return irDecodeJson(paramMs(p, 3000, 200, 15000));
+                }});
   registry.add({"ble.hid", "HID Keyboard", "ble",
                 "Advertise as a BLE keyboard, type a payload",
                 [] { return static_cast<Screen*>(new BleHidScreen()); }});

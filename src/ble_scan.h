@@ -8,6 +8,11 @@
 
 class NimBLEScan;
 
+// Headless one-shot BLE scan (ADR-0004 §4). Blocking for `durMs`. Returns
+// {"count":N,"devices":[{addr,addr_type,name,rssi,connectable,services}]}.
+// BLE and the Web UI SoftAP coexist, so no radio-busy guard here.
+std::string bleScanJson(uint32_t durMs = 4000);
+
 // Bluetooth -> BLE Scan. Continuous NimBLE active scan; live list of
 // advertising devices. A = next, A-hold = clear/rescan, B = open decode
 // detail, B-hold = back.

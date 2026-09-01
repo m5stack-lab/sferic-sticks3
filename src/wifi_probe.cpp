@@ -1,10 +1,12 @@
 #include "wifi_probe.h"
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <string.h>
 
 #include <algorithm>
+#include <cstdio>
 
 #include "hal.h"
 
@@ -166,4 +168,79 @@ void WifiProbeScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("A scroll  A(hold) clear  B(hold) back");
+}
+
+// ---------------- headless ----------------
+
+std::string wifiProbeJson(uint32_t windowMs) {
+  if (WiFi.getMode() & WIFI_MODE_AP)
+    return R"({"error":"radio_busy"})";
+
+  struct Acc {
+    uint8_t mac[6];
+    String ssid;
+    int8_t rssi;
+    uint32_t count;
+  };
+  std::vector<Acc> acc;
+  uint32_t total = 0;
+
+  g_head = g_tail = 0;
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&sniff);
+
+  const uint32_t start = millis();
+  int ch = 1;
+  while (millis() - start < windowMs) {
+    esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
+    ch = ch % 11 + 1;
+    delay(120);
+    while (g_tail != g_head) {
+      RawProbe r;
+      memcpy(&r, (const void*)&g_ring[g_tail], sizeof(r));
+      g_tail = (g_tail + 1) & (kRing - 1);
+      ++total;
+      bool merged = false;
+      for (auto& e : acc) {
+        if (memcmp(e.mac, r.mac, 6) == 0 && e.ssid == r.ssid) {
+          e.rssi = r.rssi;
+          ++e.count;
+          merged = true;
+          break;
+        }
+      }
+      if (!merged && acc.size() < 64) {
+        Acc e{};
+        memcpy(e.mac, r.mac, 6);
+        e.ssid = r.ssid;
+        e.rssi = r.rssi;
+        e.count = 1;
+        acc.push_back(std::move(e));
+      }
+    }
+  }
+
+  esp_wifi_set_promiscuous_rx_cb(nullptr);
+  esp_wifi_set_promiscuous(false);
+  WiFi.mode(WIFI_OFF);
+
+  JsonDocument d;
+  d["total"] = total;
+  d["uniq"] = (uint32_t)acc.size();
+  JsonArray arr = d["probes"].to<JsonArray>();
+  for (const auto& e : acc) {
+    JsonObject o = arr.add<JsonObject>();
+    char mac[18];
+    std::snprintf(mac, sizeof(mac), "%02x:%02x:%02x:%02x:%02x:%02x", e.mac[0],
+                  e.mac[1], e.mac[2], e.mac[3], e.mac[4], e.mac[5]);
+    o["mac"] = mac;
+    o["ssid"] = e.ssid;
+    o["rssi"] = e.rssi;
+    o["count"] = e.count;
+  }
+
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }

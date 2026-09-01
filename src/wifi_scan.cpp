@@ -1,5 +1,6 @@
 #include "wifi_scan.h"
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 
 #include "hal.h"
@@ -155,4 +156,50 @@ void WifiScanScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("A next  A(hold)/B rescan  B(hold) back");
+}
+
+// ---------------- headless ----------------
+
+std::string wifiScanJson(uint32_t timeoutMs) {
+  if (WiFi.getMode() & WIFI_MODE_AP)
+    return R"({"error":"radio_busy"})";
+
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(false, true);
+  WiFi.scanDelete();
+  WiFi.scanNetworks(/*async=*/true, /*show_hidden=*/true);
+
+  const uint32_t start = millis();
+  int n = WIFI_SCAN_RUNNING;
+  while ((n = WiFi.scanComplete()) == WIFI_SCAN_RUNNING) {
+    if (millis() - start > timeoutMs) {
+      WiFi.scanDelete();
+      WiFi.mode(WIFI_OFF);
+      return R"({"error":"timeout"})";
+    }
+    delay(50);
+  }
+  if (n < 0) {
+    WiFi.scanDelete();
+    WiFi.mode(WIFI_OFF);
+    return R"({"error":"scan_failed"})";
+  }
+
+  JsonDocument d;
+  d["count"] = n;
+  JsonArray aps = d["aps"].to<JsonArray>();
+  for (int i = 0; i < n; ++i) {
+    JsonObject o = aps.add<JsonObject>();
+    o["ssid"] = WiFi.SSID(i);
+    o["bssid"] = WiFi.BSSIDstr(i);
+    o["rssi"] = WiFi.RSSI(i);
+    o["channel"] = WiFi.channel(i);
+    o["enc"] = encTag(WiFi.encryptionType(i));
+  }
+  WiFi.scanDelete();
+  WiFi.mode(WIFI_OFF);
+
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }

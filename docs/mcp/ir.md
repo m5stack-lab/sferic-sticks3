@@ -1,8 +1,10 @@
 # MCP contract: `ir` toolset
 
 **Status:** draft — living spec (ADR-0003 §7).
-**Firmware:** `src/ir_tool.cpp` (`IrScreen`) — on-device Learn / Replay;
-no headless path yet.
+**Firmware:** `src/ir_tool.cpp` (Learn / Replay), `src/ir_decode.cpp`.
+`ir.decode` has a headless one-shot `run()` (`docs/mcp/headless.md`);
+`ir.capture` / `ir.replay` / `ir.tvbgone` emit and stay behind the on-device
+arm/confirm guard.
 **Toolset id:** `ir` · **Radios:** `ir-tx` (GPIO 46), `ir-rx` (GPIO 42)
 · library: IRremoteESP8266
 

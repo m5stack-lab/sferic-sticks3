@@ -1,8 +1,11 @@
 #include "ir_decode.h"
 
+#include <ArduinoJson.h>
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRutils.h>
+
+#include <cstdio>
 
 #include "hal.h"
 
@@ -81,4 +84,39 @@ void IrDecodeScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("B(hold) back");
+}
+
+// ---------------- headless ----------------
+
+std::string irDecodeJson(uint32_t timeoutMs) {
+  if (!g_rx) g_rx = new IRrecv(kRxPin, 1024, 15, true);
+  g_rx->enableIRIn();
+
+  decode_results res;
+  const uint32_t start = millis();
+  while (millis() - start < timeoutMs) {
+    if (g_rx->decode(&res)) {
+      JsonDocument d;
+      const String proto = typeToString(res.decode_type, false);
+      if (res.decode_type == UNKNOWN) {
+        d["protocol"] = "RAW";
+        d["samples"] = res.rawlen;
+      } else {
+        char val[24];
+        std::snprintf(val, sizeof(val), "0x%llX",
+                      (unsigned long long)res.value);
+        d["protocol"] = proto;
+        d["value"] = val;
+        d["bits"] = res.bits;
+      }
+      g_rx->resume();
+      g_rx->disableIRIn();
+      std::string out;
+      serializeJson(d, out);
+      return out;
+    }
+    delay(10);
+  }
+  g_rx->disableIRIn();
+  return R"({"error":"timeout"})";
 }

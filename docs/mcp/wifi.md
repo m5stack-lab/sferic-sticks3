@@ -1,8 +1,10 @@
 # MCP contract: `wifi` toolset
 
 **Status:** draft — living spec (ADR-0003 §7), not an ADR.
-**Firmware:** `src/wifi_scan.cpp` (`WifiScanScreen`) — on-device only so far;
-no headless path yet.
+**Firmware:** `src/wifi_scan.cpp`, `src/wifi_probe.cpp`. `wifi.scan` and
+`wifi.probe` have a headless one-shot `run()` (`docs/mcp/headless.md`),
+reachable over the collector serial link; `wifi.monitor` / `wifi.handshake`
+/ `wifi.deauth` are still `Screen`-only (streaming — need a job shape).
 **Toolset id:** `wifi` · **Radio:** onboard 2.4 GHz (`wifi-2g4`)
 
 All tools take `station` (id or friendly name; required). All can return

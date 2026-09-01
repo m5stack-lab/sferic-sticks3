@@ -1,5 +1,6 @@
 #include "ble_scan.h"
 
+#include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 
 #include <string>
@@ -143,6 +144,41 @@ void BleScanScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("A next  A(hold) rescan  B open  B(hold) back");
+}
+
+// ---------------- headless ----------------
+
+std::string bleScanJson(uint32_t durMs) {
+  NimBLEScan* s = bleScan();
+  s->setActiveScan(true);
+  s->setMaxResults(48);
+  s->setInterval(45);
+  s->setWindow(15);
+  s->clearResults();
+
+  const NimBLEScanResults r = s->getResults(durMs, false);  // blocks durMs
+
+  JsonDocument d;
+  d["count"] = r.getCount();
+  JsonArray devs = d["devices"].to<JsonArray>();
+  for (int i = 0; i < r.getCount(); ++i) {
+    const NimBLEAdvertisedDevice* dv = r.getDevice(i);
+    if (dv == nullptr) continue;
+    JsonObject o = devs.add<JsonObject>();
+    o["addr"] = dv->getAddress().toString();
+    o["addr_type"] = dv->getAddressType();
+    o["name"] = dv->haveName() ? dv->getName() : std::string();
+    o["rssi"] = dv->getRSSI();
+    o["connectable"] = dv->isConnectable();
+    o["services"] = dv->getServiceUUIDCount();
+  }
+
+  s->clearResults();
+  bleStop();
+
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }
 
 // ---------------- BleDetailScreen ----------------

@@ -1,8 +1,9 @@
 # MCP contract: `ble` toolset
 
 **Status:** draft — living spec (ADR-0003 §7), not an ADR.
-**Firmware:** `src/ble_scan.cpp` (`BleScanScreen`) — on-device only so far;
-no headless path yet.
+**Firmware:** `src/ble_scan.cpp`. `ble.scan` has a headless one-shot `run()`
+(`docs/mcp/headless.md`); `ble.spam` / `ble.gatt` / `ble.hid` are
+`Screen`-only.
 **Toolset id:** `ble` · **Stack:** NimBLE-Arduino · **Radio:** onboard BLE (`ble`)
 
 All tools take `station` (required). All can return `capability_not_present`
