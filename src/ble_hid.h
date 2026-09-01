@@ -1,9 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "confirm.h"
 #include "ui.h"
+
+// Headless emit (behind emit_arm/emit_fire). arm brings up the BLE keyboard
+// advertisement; fire types params {"text": "..."} if a host is paired.
+// Returns {"typed":<n>} or {"error":"not_paired"}.
+bool bleHidArm(const std::string& params);
+std::string bleHidEmit(const std::string& params);
 
 // Bluetooth -> BLE HID. Advertises as a BLE keyboard; when a host pairs,
 // B types the selected canned payload. A = cycle payload, B = type,

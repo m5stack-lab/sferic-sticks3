@@ -1,5 +1,6 @@
 #include "ble_hid.h"
 
+#include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 #include <NimBLEHIDDevice.h>
 
@@ -62,10 +63,8 @@ void sendReport(uint8_t mods, uint8_t key) {
   g_input->setValue(r, sizeof(r));
   g_input->notify();
 }
-}  // namespace
 
-void BleHidScreen::onEnter() {
-  dirty_ = true;
+void hidSetup() {
   bleScan();  // lazy NimBLE init + stop any scan
   if (!g_srv) {
     NimBLEDevice::setDeviceName("sferic-kb");
@@ -85,6 +84,49 @@ void BleHidScreen::onEnter() {
   adv->addServiceUUID(g_hid->getHidService()->getUUID());
   adv->enableScanResponse(true);
   adv->start();
+}
+}  // namespace
+
+void BleHidScreen::onEnter() {
+  dirty_ = true;
+  hidSetup();
+}
+
+// ---------------- headless emit ----------------
+
+bool bleHidArm(const std::string&) {
+  hidSetup();
+  return true;
+}
+
+std::string bleHidEmit(const std::string& params) {
+  JsonDocument p;
+  const char* text = "hello from sferic\n";
+  if (deserializeJson(p, params) == DeserializationError::Ok &&
+      p["text"].is<const char*>())
+    text = p["text"];
+
+  if (!g_connected) return R"({"error":"not_paired"})";
+
+  int n = 0;
+  for (const char* s = text; *s; ++s) {
+    uint8_t u;
+    bool sh;
+    if (!asciiToHid(*s, u, sh)) continue;
+    sendReport(sh ? 0x02 : 0x00, u);
+    delay(6);
+    sendReport(0, 0);
+    delay(6);
+    ++n;
+  }
+  sendReport(0, 0);
+
+  Serial.printf("[hid] headless typed %d chars\n", n);
+  JsonDocument d;
+  d["typed"] = n;
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }
 
 void BleHidScreen::onExit() {

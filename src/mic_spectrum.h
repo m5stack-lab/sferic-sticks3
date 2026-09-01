@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
 
 // Sensors -> Mic Spectrum. Records from the ES8311 mic, FFTs it, draws a
@@ -20,3 +22,9 @@ class MicSpectrumScreen : public Screen {
   uint32_t lastLog_ = 0;
   void draw();
 };
+
+// Headless streaming (ADR-0003 §6): 256-pt FFT of the ES8311 mic, emits a
+// "mic" strike ~2/s with {peak_hz, peak_mag}.
+bool micStreamStart(const std::string& params);
+void micStreamPoll(const StrikeEmit& emit);
+void micStreamStop();

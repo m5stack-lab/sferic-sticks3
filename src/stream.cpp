@@ -6,8 +6,12 @@
 #include <cstdio>
 #include <vector>
 
+#include "ble_spam.h"
+#include "evil_portal.h"
 #include "hal.h"
+#include "mic_spectrum.h"
 #include "registry.h"
+#include "wardrive.h"
 #include "wifi_deauth.h"
 #include "wifi_handshake.h"
 #include "wifi_monitor.h"
@@ -60,6 +64,14 @@ void stream::registerTools() {
                      &wifiDeauthStreamPoll, &wifiDeauthStreamStop});
   g_tools.push_back({"wifi.handshake", "wifi", &wifiHandshakeStreamStart,
                      &wifiHandshakeStreamPoll, &wifiHandshakeStreamStop});
+  g_tools.push_back({"ble.spam", "ble", &bleSpamStreamStart,
+                     &bleSpamStreamPoll, &bleSpamStreamStop});
+  g_tools.push_back({"sensors.mic", "sensors", &micStreamStart,
+                     &micStreamPoll, &micStreamStop});
+  g_tools.push_back({"wifi.wardrive", "wifi", &wardriveStreamStart,
+                     &wardriveStreamPoll, &wardriveStreamStop});
+  g_tools.push_back({"wifi.portal", "wifi", &portalStreamStart,
+                     &portalStreamPoll, &portalStreamStop});
 }
 
 bool stream::begin(const std::string& id, const std::string& params,

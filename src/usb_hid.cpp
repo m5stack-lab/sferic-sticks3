@@ -4,13 +4,24 @@
 
 #ifdef SFERIC_USB_HID
 
+#include <ArduinoJson.h>
 #include <USB.h>
 #include <USBHIDKeyboard.h>
+
+#include <string>
 
 namespace {
 constexpr int kTitleH = 18;
 USBHIDKeyboard g_kbd;
 bool g_begun = false;
+
+void usbBegin() {
+  if (!g_begun) {
+    USB.begin();
+    g_kbd.begin();
+    g_begun = true;
+  }
+}
 
 const char* kPayloads[] = {
     "hello from sferic\n",
@@ -22,11 +33,29 @@ constexpr int kPayloadCount = sizeof(kPayloads) / sizeof(kPayloads[0]);
 
 void UsbHidScreen::onEnter() {
   dirty_ = true;
-  if (!g_begun) {
-    USB.begin();
-    g_kbd.begin();
-    g_begun = true;
-  }
+  usbBegin();
+}
+
+// ---------------- headless emit ----------------
+
+bool usbHidArm(const std::string&) {
+  usbBegin();
+  return true;
+}
+
+std::string usbHidEmit(const std::string& params) {
+  JsonDocument p;
+  const char* text = "hello from sferic\n";
+  if (deserializeJson(p, params) == DeserializationError::Ok &&
+      p["text"].is<const char*>())
+    text = p["text"];
+  const size_t n = g_kbd.print(text);
+  Serial.printf("[usbhid] headless typed %u chars\n", (unsigned)n);
+  JsonDocument d;
+  d["typed"] = (uint32_t)n;
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }
 
 void UsbHidScreen::tick() {

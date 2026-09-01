@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
 
 class NimBLEScan;
@@ -26,3 +28,9 @@ class BleSpamScreen : public Screen {
   uint32_t lastDraw_ = 0;
   void draw();
 };
+
+// Headless streaming (ADR-0003 §6): the same passive adv-rate / churn watch,
+// emitting a "spam" strike ~1/s with {rate, churn, verdict}.
+bool bleSpamStreamStart(const std::string& params);
+void bleSpamStreamPoll(const StrikeEmit& emit);
+void bleSpamStreamStop();

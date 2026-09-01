@@ -1,9 +1,15 @@
 #include "ir_tool.h"
 
+#include <ArduinoJson.h>
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <IRutils.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <vector>
 
 #include "hal.h"
 
@@ -36,6 +42,86 @@ void IrScreen::onExit() {
     delete g_send;
     g_send = nullptr;
   }
+}
+
+// ---------------- headless ----------------
+
+namespace {
+void ensureIr() {
+  if (g_recv == nullptr) {
+    g_recv = new IRrecv(kIrRxPin, kIrCaptureBuf, kIrTimeoutMs, true);
+    g_send = new IRsend(kIrTxPin);
+    g_send->begin();
+  }
+}
+}  // namespace
+
+std::string irCaptureLearn(const std::string& params) {
+  uint32_t ms = 5000;
+  JsonDocument p;
+  if (deserializeJson(p, params) == DeserializationError::Ok &&
+      p["ms"].is<uint32_t>())
+    ms = p["ms"];
+  ensureIr();
+  g_recv->enableIRIn();
+  g_recv->resume();
+
+  const uint32_t start = millis();
+  while (millis() - start < ms) {
+    if (g_recv->decode(&g_results)) {
+      JsonDocument d;
+      const String proto = typeToString(g_results.decode_type, false);
+      char val[24];
+      std::snprintf(val, sizeof(val), "0x%llX",
+                    (unsigned long long)g_results.value);
+      d["protocol"] = proto;
+      d["value"] = val;
+      d["bits"] = g_results.bits;
+      uint16_t* rb = resultToRawArray(&g_results);
+      const uint16_t rlen = getCorrectedRawLength(&g_results);
+      JsonArray raw = d["raw"].to<JsonArray>();
+      for (uint16_t i = 0; i < rlen; ++i) raw.add(rb[i]);
+      delete[] rb;
+      g_recv->disableIRIn();
+      std::string out;
+      serializeJson(d, out);
+      return out;
+    }
+    delay(10);
+  }
+  g_recv->disableIRIn();
+  return R"({"error":"timeout"})";
+}
+
+std::string irReplayEmit(const std::string& params) {
+  JsonDocument p;
+  if (deserializeJson(p, params) != DeserializationError::Ok)
+    return R"({"error":"bad_params"})";
+  ensureIr();
+  bool sent = false;
+
+  if (p["raw"].is<JsonArrayConst>()) {
+    std::vector<uint16_t> buf;
+    for (JsonVariantConst v : p["raw"].as<JsonArrayConst>())
+      buf.push_back((uint16_t)v.as<unsigned long>());
+    if (!buf.empty()) {
+      g_send->sendRaw(buf.data(), buf.size(), 38);
+      sent = true;
+    }
+  } else if (!p["proto"].isNull()) {
+    const long proto = p["proto"] | 0;
+    const uint64_t value =
+        std::strtoull(p["value"] | "0", nullptr, 0);
+    const uint16_t bits = p["bits"] | 32;
+    sent = g_send->send((decode_type_t)proto, value, bits);
+  }
+  if (g_recv) g_recv->enableIRIn();
+
+  JsonDocument d;
+  d["sent"] = sent;
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }
 
 void IrScreen::arm() {

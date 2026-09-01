@@ -4,7 +4,15 @@
 #include <string>
 #include <vector>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
+
+// Headless streaming (ADR-0003 §6): channel-wide async AP discovery + a
+// gyro-integrated relative bearing; emits an "ap" strike per newly-seen
+// BSSID with {bssid,ssid,rssi,channel,enc,bearing}.
+bool wardriveStreamStart(const std::string& params);
+void wardriveStreamPoll(const StrikeEmit& emit);
+void wardriveStreamStop();
 
 // WiFi -> Wardrive. Continuous AP discovery + a relative bearing integrated
 // from the gyro (no magnetometer — drifts; A-hold zeros it). RAM log,

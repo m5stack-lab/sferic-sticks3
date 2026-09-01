@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
 
 // WiFi -> Evil Portal. Open SoftAP + catch-all DNS + a generic captive
@@ -30,3 +31,9 @@ struct PortalHit {
   uint32_t ms;
 };
 extern std::vector<PortalHit> g_portalHits;
+
+// Headless streaming (ADR-0003 §6): stand up the open SoftAP + captive login
+// page (params: {"ssid": "..."}), emit a "credential" strike per capture.
+bool portalStreamStart(const std::string& params);
+void portalStreamPoll(const StrikeEmit& emit);
+void portalStreamStop();

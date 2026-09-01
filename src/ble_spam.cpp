@@ -1,5 +1,6 @@
 #include "ble_spam.h"
 
+#include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 
 #include "ble_common.h"
@@ -138,3 +139,46 @@ void BleSpamScreen::draw() {
   g.setCursor(4, hal.h() - 9);
   g.print("B reset peak  B(hold) back");
 }
+
+// ---------------- headless streaming ----------------
+
+namespace {
+uint32_t g_sWin = 0;
+}
+
+bool bleSpamStreamStart(const std::string&) {
+  NimBLEScan* sc = bleScan();
+  sc->setActiveScan(false);
+  sc->setDuplicateFilter(0);
+  sc->setScanCallbacks(&g_cb, /*wantDuplicates=*/true);
+  sc->setInterval(30);
+  sc->setWindow(30);
+  sc->start(0, false);
+  portENTER_CRITICAL(&g_mux);
+  g_pkts = g_churn = 0;
+  portEXIT_CRITICAL(&g_mux);
+  g_sWin = millis();
+  return true;
+}
+
+void bleSpamStreamPoll(const StrikeEmit& emit) {
+  const uint32_t now = millis();
+  if (now - g_sWin < kWindowMs) return;
+  uint32_t pk, ch;
+  portENTER_CRITICAL(&g_mux);
+  pk = g_pkts;
+  ch = g_churn;
+  g_pkts = g_churn = 0;
+  portEXIT_CRITICAL(&g_mux);
+  const uint32_t dt = now - g_sWin;
+  g_sWin = now;
+  const uint32_t rate = pk * 1000 / dt;
+  const uint32_t churn = ch * 1000 / dt;
+  JsonDocument d;
+  d["rate"] = rate;
+  d["churn"] = churn;
+  d["verdict"] = verdict(rate, churn);
+  emit("spam", d);
+}
+
+void bleSpamStreamStop() { bleStop(&g_cb); }

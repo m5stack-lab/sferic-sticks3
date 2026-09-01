@@ -1,5 +1,6 @@
 #include "mic_spectrum.h"
 
+#include <ArduinoJson.h>
 #include <M5Unified.h>
 #include <arduinoFFT.h>
 
@@ -108,3 +109,47 @@ void MicSpectrumScreen::draw() {
   g.setCursor(4, hal.h() - 9);
   g.print("A hold  B(hold) back");
 }
+
+// ---------------- headless streaming ----------------
+
+namespace {
+uint32_t g_sMicEmit = 0;
+}
+
+bool micStreamStart(const std::string&) {
+  M5.Speaker.end();  // speaker + mic share the codec
+  M5.Mic.begin();
+  g_sMicEmit = 0;
+  return M5.Mic.isEnabled();
+}
+
+void micStreamPoll(const StrikeEmit& emit) {
+  if (!M5.Mic.isEnabled()) return;
+  if (!M5.Mic.record(g_samples, kN, kRate)) return;
+  while (M5.Mic.isRecording()) delay(1);
+  for (int i = 0; i < kN; ++i) {
+    g_real[i] = (float)g_samples[i];
+    g_imag[i] = 0.0f;
+  }
+  g_fft.windowing(FFTWindow::Hamming, FFTDirection::Forward);
+  g_fft.compute(FFTDirection::Forward);
+  g_fft.complexToMagnitude();
+
+  float pk = 0;
+  int pkBin = 1;
+  for (int i = 1; i < kBins; ++i)
+    if (g_real[i] > pk) {
+      pk = g_real[i];
+      pkBin = i;
+    }
+
+  const uint32_t now = millis();
+  if (now - g_sMicEmit < 500) return;  // ~2/s
+  g_sMicEmit = now;
+  JsonDocument d;
+  d["peak_hz"] = pkBin * kBinHz;
+  d["peak_mag"] = pk;
+  emit("mic", d);
+}
+
+void micStreamStop() { M5.Mic.end(); }

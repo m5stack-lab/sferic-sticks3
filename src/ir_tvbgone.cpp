@@ -1,7 +1,10 @@
 #include "ir_tvbgone.h"
 
+#include <ArduinoJson.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+
+#include <string>
 
 #include "hal.h"
 
@@ -82,6 +85,25 @@ void TvBGoneScreen::onEnter() {
   }
   state_ = State::Idle;
   idx_ = 0;
+}
+
+std::string tvBGoneEmit(const std::string&) {
+  if (g_tx == nullptr) {
+    g_tx = new IRsend(kIrTxPin);
+    g_tx->begin();
+  }
+  for (int i = 0; i < kCount; ++i) {
+    const TvCode& c = kCodes[i];
+    g_tx->send(c.proto, c.value, c.bits);
+    g_tx->send(c.proto, c.value, c.bits);
+    delay(kGapMs);
+  }
+  Serial.printf("[tvbgone] headless sweep: %d codes\n", kCount);
+  JsonDocument d;
+  d["sent"] = kCount;
+  std::string out;
+  serializeJson(d, out);
+  return out;
 }
 
 void TvBGoneScreen::onExit() {

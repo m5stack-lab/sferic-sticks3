@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "emit.h"
 #include "hal.h"
 #include "pcap.h"
 #include "registry.h"
@@ -188,6 +189,55 @@ void opStreamStatus(long id) {
   reply(d);
 }
 
+void opEmitArm(long id, JsonObjectConst cmd) {
+  const char* tool = cmd["tool"] | "";
+  if (!*tool) {
+    replyErr(id, "missing_tool");
+    return;
+  }
+  String params;
+  if (!cmd["params"].isNull()) serializeJson(cmd["params"], params);
+  std::string token, err;
+  uint32_t window = 0;
+  if (!emit::arm(tool, params.c_str(), token, window, err)) {
+    replyErr(id, err.c_str());
+    return;
+  }
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = true;
+  d["token"] = token;
+  d["expires_ms"] = window;
+  reply(d);
+}
+
+void opEmitFire(long id, JsonObjectConst cmd) {
+  const char* token = cmd["token"] | "";
+  std::string result, err;
+  if (!emit::fire(token, result, err)) {
+    replyErr(id, err.c_str());
+    return;
+  }
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = true;
+  JsonDocument r;
+  if (deserializeJson(r, result) == DeserializationError::Ok)
+    d["result"] = r;
+  else
+    d["result"] = result;
+  reply(d);
+}
+
+void opEmitStatus(long id) {
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = true;
+  d["armed"] = emit::armed();
+  d["tool"] = emit::armedId();
+  reply(d);
+}
+
 }  // namespace
 
 void SerialControl::handleLine() {
@@ -217,6 +267,12 @@ void SerialControl::handleLine() {
     opStreamStop(id);
   else if (!std::strcmp(op, "stream_status"))
     opStreamStatus(id);
+  else if (!std::strcmp(op, "emit_arm"))
+    opEmitArm(id, cmd);
+  else if (!std::strcmp(op, "emit_fire"))
+    opEmitFire(id, cmd);
+  else if (!std::strcmp(op, "emit_status"))
+    opEmitStatus(id);
   else
     replyErr(id, "unknown_op");
 }

@@ -1,10 +1,20 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "confirm.h"
 #include "ui.h"
+
+// Headless learn — one-shot capture, non-emitting (plain run()). Listens up
+// to params {"ms": N} (default 5000). Returns
+// {"protocol","value","bits","raw":[…]} or {"error":"timeout"}.
+std::string irCaptureLearn(const std::string& params);
+
+// Headless replay — emit (behind emit_arm/emit_fire). params:
+// {"raw":[us,…]} or {"proto":N,"value":"0x…","bits":N}. Returns {"sent":bool}.
+std::string irReplayEmit(const std::string& params);
 
 // Infrared -> Learn / Replay. Receives one IR signal on GPIO 42, holds it as
 // a strike, re-transmits on GPIO 46. A = arm / recapture; replay is two-step

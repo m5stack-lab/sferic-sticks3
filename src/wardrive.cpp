@@ -1,9 +1,13 @@
 #include "wardrive.h"
 
+#include <ArduinoJson.h>
 #include <M5Unified.h>
 #include <WiFi.h>
 #include <math.h>
 #include <string.h>
+
+#include <cstdio>
+#include <vector>
 
 #include "hal.h"
 
@@ -153,4 +157,84 @@ void WardriveScreen::draw() {
   g.setTextColor(TFT_DARKGREY, TFT_BLACK);
   g.setCursor(4, hal.h() - 9);
   g.print("A(hold) zero-brg  B csv  B(hold) back");
+}
+
+// ---------------- headless streaming ----------------
+
+namespace {
+struct SeenAp {
+  uint8_t bssid[6];
+};
+std::vector<SeenAp> g_wdSeen;
+float g_wdBrg = 0;
+uint32_t g_wdImu = 0, g_wdNext = 0;
+bool g_wdScanning = false;
+}  // namespace
+
+bool wardriveStreamStart(const std::string&) {
+  g_wdSeen.clear();
+  g_wdBrg = 0;
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(false, true);
+  g_wdScanning = false;
+  g_wdImu = millis();
+  g_wdNext = millis() + 400;
+  return true;
+}
+
+void wardriveStreamPoll(const StrikeEmit& emit) {
+  const uint32_t now = millis();
+  float gx = 0, gy = 0, gz = 0;
+  M5.Imu.getGyro(&gx, &gy, &gz);
+  g_wdBrg += gz * (now - g_wdImu) / 1000.0f;
+  g_wdImu = now;
+  while (g_wdBrg < 0) g_wdBrg += 360.0f;
+  while (g_wdBrg >= 360.0f) g_wdBrg -= 360.0f;
+
+  if (!g_wdScanning && now >= g_wdNext) {
+    WiFi.scanDelete();
+    WiFi.scanNetworks(/*async=*/true, /*hidden=*/true);
+    g_wdScanning = true;
+  }
+  if (!g_wdScanning) return;
+
+  const int r = WiFi.scanComplete();
+  if (r == WIFI_SCAN_FAILED) {
+    g_wdScanning = false;
+    g_wdNext = now + 1000;
+    return;
+  }
+  if (r < 0) return;  // still running
+
+  for (int i = 0; i < r; ++i) {
+    const uint8_t* b = WiFi.BSSID(i);
+    bool known = false;
+    for (const auto& s : g_wdSeen)
+      if (memcmp(s.bssid, b, 6) == 0) {
+        known = true;
+        break;
+      }
+    if (known || g_wdSeen.size() >= 512) continue;
+    g_wdSeen.push_back(SeenAp{});
+    memcpy(g_wdSeen.back().bssid, b, 6);
+    char bs[18];
+    std::snprintf(bs, sizeof(bs), "%02x:%02x:%02x:%02x:%02x:%02x", b[0], b[1],
+                  b[2], b[3], b[4], b[5]);
+    JsonDocument d;
+    d["bssid"] = bs;
+    d["ssid"] = WiFi.SSID(i);
+    d["rssi"] = WiFi.RSSI(i);
+    d["channel"] = WiFi.channel(i);
+    d["enc"] = encStr(WiFi.encryptionType(i));
+    d["bearing"] = g_wdBrg;
+    emit("ap", d);
+  }
+  g_wdScanning = false;
+  g_wdNext = now + 1500;
+}
+
+void wardriveStreamStop() {
+  WiFi.scanDelete();
+  WiFi.mode(WIFI_OFF);
+  g_wdSeen.clear();
 }

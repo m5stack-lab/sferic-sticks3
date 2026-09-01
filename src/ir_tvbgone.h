@@ -1,9 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "confirm.h"
 #include "ui.h"
+
+// Headless emit (behind emit_arm/emit_fire — ADR-0008 §1): sweeps the full
+// TV power-code table on the IR LED. Blocks ~5s. Returns {"sent":N}.
+std::string tvBGoneEmit(const std::string& params);
 
 // Infrared -> TV-B-Gone. Sweeps common TV power codes on the IR LED
 // (GPIO 46). B arms, B again fires (A cancels) — a stray press won't blast.

@@ -141,7 +141,10 @@ void registerBuiltinTools() {
                 }});
   registry.add({"ir.capture", "Learn / Replay", "ir",
                 "Capture and re-send an IR signal",
-                [] { return static_cast<Screen*>(new IrScreen()); }});
+                [] { return static_cast<Screen*>(new IrScreen()); },
+                [](const std::string& p) {
+                  return irCaptureLearn(p.empty() ? "{\"ms\":5000}" : p);
+                }});
   registry.add({"wifi.monitor", "Packet Monitor", "wifi",
                 "Promiscuous 802.11 frame counts",
                 [] { return static_cast<Screen*>(new WifiMonitorScreen()); }});
