@@ -24,9 +24,17 @@ String stationId() {
 }
 
 void reply(const JsonDocument& d) {
-  Serial.print('<');
-  serializeJson(d, Serial);
-  Serial.print('\n');
+  // Serialize whole, then one framed write — a byte-streamed multi-KB line can
+  // stall on TX backpressure and be read as fragments by the collector.
+  // (serializeJson(d, String&) *replaces* the string, so build the body
+  // separately and frame it here.)
+  String body;
+  body.reserve(measureJson(d) + 1);
+  serializeJson(d, body);
+  Serial.write('<');
+  Serial.write(reinterpret_cast<const uint8_t*>(body.c_str()), body.length());
+  Serial.write('\n');
+  Serial.flush();
 }
 
 void replyErr(long id, const char* code) {

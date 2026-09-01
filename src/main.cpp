@@ -8,6 +8,9 @@
 
 void setup() {
   hal.begin();
+#if ARDUINO_USB_MODE == 1
+  Serial.setTxBufferSize(4096);  // HWCDC only — headless replies are multi-KB
+#endif
   Serial.begin(115200);
   registry.begin();        // load per-tool enabled state from NVS
   registerBuiltinTools();  // ADR-0004
