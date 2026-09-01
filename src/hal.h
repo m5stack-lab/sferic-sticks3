@@ -46,6 +46,7 @@ class Hal {
 
   // --- system ---
   uint32_t nowMs() const { return millis(); }
+  const char* stationId();  // "stick-<6 hex of eFuse MAC>", stable per device
   size_t psramBytes() const { return ESP.getPsramSize(); }
   size_t freeHeap() const { return ESP.getFreeHeap(); }
   int battPercent() const { return M5.Power.getBatteryLevel(); }

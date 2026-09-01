@@ -1,9 +1,13 @@
 #include "wifi_handshake.h"
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <esp_timer.h>
 #include <esp_wifi.h>
 #include <string.h>
+
+#include <cstdio>
+#include <vector>
 
 #include "hal.h"
 #include "pcap.h"
@@ -158,6 +162,103 @@ void WifiHandshakeScreen::tick() {
     dirty_ = false;
     lastDraw_ = now;
   }
+}
+
+// ---------------- headless streaming ----------------
+
+namespace {
+struct SHAp {
+  uint8_t bssid[6];
+  char ssid[33];
+  uint8_t eapol;
+  bool announced;
+};
+std::vector<SHAp> g_shAps;
+uint32_t g_shHop = 0;
+
+void bssidStr(const uint8_t* b, char out[18]) {
+  std::snprintf(out, 18, "%02x:%02x:%02x:%02x:%02x:%02x", b[0], b[1], b[2], b[3],
+                b[4], b[5]);
+}
+}  // namespace
+
+bool wifiHandshakeStreamStart(const std::string&) {
+  g_shAps.clear();
+  capture.begin(kBufBytes);
+  capture.reset();
+  capture.setRecording(true);
+  g_head = g_tail = 0;
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&sniff);
+  g_channel = 1;
+  esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
+  g_shHop = millis();
+  return true;
+}
+
+void wifiHandshakeStreamPoll(const StrikeEmit& emit) {
+  while (g_tail != g_head) {
+    Hit h;
+    memcpy(&h, (const void*)&g_ring[g_tail], sizeof(h));
+    g_tail = (g_tail + 1) & (kRing - 1);
+
+    SHAp* ap = nullptr;
+    for (auto& x : g_shAps)
+      if (memcmp(x.bssid, h.bssid, 6) == 0) {
+        ap = &x;
+        break;
+      }
+    if (!ap) {
+      if (g_shAps.size() >= 32) continue;
+      g_shAps.push_back(SHAp{});
+      ap = &g_shAps.back();
+      memcpy(ap->bssid, h.bssid, 6);
+      ap->ssid[0] = '\0';
+      ap->eapol = 0;
+      ap->announced = false;
+    }
+    if (h.ssid[0]) {
+      strncpy(ap->ssid, h.ssid, sizeof(ap->ssid) - 1);
+      ap->ssid[sizeof(ap->ssid) - 1] = '\0';
+    }
+    if (!h.eapol) continue;
+
+    if (ap->eapol < 255) ap->eapol++;
+    char b[18];
+    bssidStr(ap->bssid, b);
+    JsonDocument d;
+    d["bssid"] = b;
+    d["ssid"] = ap->ssid;
+    d["rssi"] = h.rssi;
+    d["eapol"] = ap->eapol;
+    emit("eapol", d);
+
+    if (ap->eapol >= 4 && !ap->announced) {
+      ap->announced = true;
+      JsonDocument hs;
+      hs["bssid"] = b;
+      hs["ssid"] = ap->ssid;
+      hs["frames"] = capture.frames();
+      hs["bytes"] = (uint32_t)capture.used();
+      emit("handshake", hs);
+    }
+  }
+
+  const uint32_t now = millis();
+  if (now - g_shHop > 400) {
+    g_shHop = now;
+    g_channel = g_channel % 11 + 1;
+    esp_wifi_set_channel(g_channel, WIFI_SECOND_CHAN_NONE);
+  }
+}
+
+void wifiHandshakeStreamStop() {
+  esp_wifi_set_promiscuous_rx_cb(nullptr);
+  esp_wifi_set_promiscuous(false);
+  capture.setRecording(false);
+  WiFi.mode(WIFI_OFF);
+  g_shAps.clear();
 }
 
 void WifiHandshakeScreen::draw() {

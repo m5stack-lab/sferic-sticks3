@@ -1,8 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
+
+// Headless streaming session (ADR-0003 §6): channel-hopping promiscuous
+// capture, emits a "monitor" strike ~1/s with total/mgmt/data/ctrl counts,
+// rate, and last RSSI. See src/stream.cpp.
+bool wifiMonitorStreamStart(const std::string& params);
+void wifiMonitorStreamPoll(const StrikeEmit& emit);
+void wifiMonitorStreamStop();
 
 // WiFi -> Packet Monitor. Promiscuous 802.11 capture: live frame counts by
 // type, rate, last RSSI. A = step channel, A-hold = toggle hop, B = reset

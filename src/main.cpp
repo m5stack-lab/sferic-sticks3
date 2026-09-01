@@ -4,6 +4,7 @@
 #include "menu_tree.h"
 #include "registry.h"
 #include "serial_control.h"
+#include "stream.h"
 #include "ui.h"
 
 void setup() {
@@ -14,6 +15,7 @@ void setup() {
   Serial.begin(115200);
   registry.begin();        // load per-tool enabled state from NVS
   registerBuiltinTools();  // ADR-0004
+  stream::registerTools();  // headless streaming sessions
   ui.push(makeRootMenu());
   Serial.printf("\n[sferic] up  %d tools\n", (int)registry.all().size());
   for (const auto& t : registry.all())
@@ -23,6 +25,7 @@ void setup() {
 
 void loop() {
   serialCtl.poll();  // headless command channel (collector transport)
+  stream::poll();    // active streaming session, if any
   hal.update();
   ui.tick();
   if (ui.empty()) ui.push(makeRootMenu());  // never fall through to a blank screen

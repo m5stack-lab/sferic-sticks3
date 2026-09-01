@@ -1,9 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
+#include "stream.h"  // StrikeEmit
 #include "ui.h"
+
+// Headless streaming session (ADR-0003 §6): passive promiscuous deauth watch,
+// emits a "deauth" strike when a BSSID's 1s deauth rate first crosses the
+// attack threshold (re-armed once it calms). See src/stream.cpp.
+bool wifiDeauthStreamStart(const std::string& params);
+void wifiDeauthStreamPoll(const StrikeEmit& emit);
+void wifiDeauthStreamStop();
 
 // WiFi -> Deauth Detector. Passive. Counts 802.11 deauth (0x0C) and
 // disassoc (0x0A) management frames per BSSID and their rate; flags an

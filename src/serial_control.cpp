@@ -9,19 +9,12 @@
 #include "hal.h"
 #include "pcap.h"
 #include "registry.h"
+#include "stream.h"
 #include "version.h"
 
 SerialControl serialCtl;
 
 namespace {
-
-// stick-<last 6 hex of the eFuse MAC> — stable per device, no NVS needed.
-String stationId() {
-  const uint64_t mac = ESP.getEfuseMac();
-  char b[20];
-  std::snprintf(b, sizeof(b), "stick-%06lx", (unsigned long)(mac & 0xFFFFFF));
-  return b;
-}
 
 void reply(const JsonDocument& d) {
   // Serialize whole, then one framed write — a byte-streamed multi-KB line can
@@ -50,7 +43,7 @@ void opHello(long id) {
   d["id"] = id;
   d["ok"] = true;
   JsonObject s = d["station"].to<JsonObject>();
-  s["id"] = stationId();
+  s["id"] = hal.stationId();
   s["model"] = "m5stack-sticks3";
   s["fw_version"] = SFERIC_VERSION " " SFERIC_BUILD;
   JsonArray ts = s["toolsets"].to<JsonArray>();
@@ -152,6 +145,49 @@ void opSet(long id, JsonObjectConst cmd) {
   reply(d);
 }
 
+void opStreamStart(long id, JsonObjectConst cmd) {
+  const char* tool = cmd["tool"] | "";
+  if (!*tool) {
+    replyErr(id, "missing_tool");
+    return;
+  }
+  String params;
+  if (!cmd["params"].isNull()) serializeJson(cmd["params"], params);
+  std::string flash, err;
+  if (!stream::begin(tool, params.c_str(), flash, err)) {
+    replyErr(id, err.c_str());
+    return;
+  }
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = true;
+  d["flash"] = flash;
+  reply(d);
+}
+
+void opStreamStop(long id) {
+  uint32_t n = 0;
+  const bool wasActive = stream::active();
+  stream::end(n);
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = wasActive;
+  d["count"] = n;
+  if (!wasActive) d["error"] = "not_streaming";
+  reply(d);
+}
+
+void opStreamStatus(long id) {
+  JsonDocument d;
+  d["id"] = id;
+  d["ok"] = true;
+  d["active"] = stream::active();
+  d["tool"] = stream::activeId();
+  d["flash"] = stream::activeFlash();
+  d["count"] = stream::count();
+  reply(d);
+}
+
 }  // namespace
 
 void SerialControl::handleLine() {
@@ -175,6 +211,12 @@ void SerialControl::handleLine() {
     opRun(id, cmd);
   else if (!std::strcmp(op, "set"))
     opSet(id, cmd);
+  else if (!std::strcmp(op, "stream_start"))
+    opStreamStart(id, cmd);
+  else if (!std::strcmp(op, "stream_stop"))
+    opStreamStop(id);
+  else if (!std::strcmp(op, "stream_status"))
+    opStreamStatus(id);
   else
     replyErr(id, "unknown_op");
 }

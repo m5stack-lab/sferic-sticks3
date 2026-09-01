@@ -1,5 +1,6 @@
 #include "wifi_monitor.h"
 
+#include <ArduinoJson.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
 
@@ -24,7 +25,52 @@ void sniff(void* buf, wifi_promiscuous_pkt_type_t type) {
 }
 
 void resetCounters() { g_total = g_mgmt = g_data = g_ctrl = 0; }
+
+// stream-session state (separate from the Screen's members)
+uint32_t g_sRate = 0, g_sLastTotal = 0, g_sHop = 0;
+uint8_t g_sCh = 1;
 }  // namespace
+
+bool wifiMonitorStreamStart(const std::string&) {
+  resetCounters();
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_rx_cb(&sniff);
+  g_sCh = 1;
+  esp_wifi_set_channel(g_sCh, WIFI_SECOND_CHAN_NONE);
+  g_sRate = g_sHop = millis();
+  g_sLastTotal = 0;
+  return true;
+}
+
+void wifiMonitorStreamPoll(const StrikeEmit& emit) {
+  const uint32_t now = millis();
+  if (now - g_sHop > 250) {
+    g_sHop = now;
+    g_sCh = g_sCh % 13 + 1;
+    esp_wifi_set_channel(g_sCh, WIFI_SECOND_CHAN_NONE);
+  }
+  if (now - g_sRate >= 1000) {
+    const uint32_t dt = now - g_sRate;
+    const uint32_t total = g_total;
+    JsonDocument d;
+    d["total"] = total;
+    d["mgmt"] = (uint32_t)g_mgmt;
+    d["data"] = (uint32_t)g_data;
+    d["ctrl"] = (uint32_t)g_ctrl;
+    d["rate"] = (total - g_sLastTotal) * 1000 / dt;
+    d["rssi"] = g_last_rssi;
+    emit("monitor", d);
+    g_sLastTotal = total;
+    g_sRate = now;
+  }
+}
+
+void wifiMonitorStreamStop() {
+  esp_wifi_set_promiscuous_rx_cb(nullptr);
+  esp_wifi_set_promiscuous(false);
+  WiFi.mode(WIFI_OFF);
+}
 
 void WifiMonitorScreen::onEnter() {
   dirty_ = true;

@@ -2,6 +2,8 @@
 
 #include <Preferences.h>
 
+#include <cstdio>
+
 Hal hal;
 
 void Hal::begin() {
@@ -29,6 +31,16 @@ void Hal::poll(BtnState& s, bool raw, uint32_t now) {
     s.down = false;
     if (!s.holdFired) s.pending = BtnEvent::Click;
   }
+}
+
+const char* Hal::stationId() {
+  static char id[16] = {0};
+  if (!id[0]) {
+    const uint64_t mac = ESP.getEfuseMac();
+    std::snprintf(id, sizeof(id), "stick-%06lx",
+                  (unsigned long)(mac & 0xFFFFFF));
+  }
+  return id;
 }
 
 void Hal::injectNav(Btn b, BtnEvent e) {
