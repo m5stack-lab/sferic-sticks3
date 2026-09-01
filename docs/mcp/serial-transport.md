@@ -124,9 +124,36 @@ idle channel returns `{"ok":false,"error":"not_streaming"}`. `stream_status`
 | `wifi.monitor` | `monitor` (~1/s) | `{total,mgmt,data,ctrl,rate,rssi}` |
 | `wifi.deauth` | `deauth` (on threshold cross, re-armed once calm) | `{bssid,deauth,disassoc,rate}` |
 | `wifi.handshake` | `eapol` per frame, `handshake` at 4 EAPOL for a BSSID | `{bssid,ssid,rssi,eapol}` / `{bssid,ssid,frames,bytes}` |
+| `wifi.wardrive` | `ap` per newly-seen BSSID | `{bssid,ssid,rssi,channel,enc,bearing}` |
+| `wifi.portal` | `credential` per capture (params `{ssid}`) | `{ssid,field1,field2}` |
+| `ble.spam` | `spam` (~1/s) | `{rate,churn,verdict}` |
+| `sensors.mic` | `mic` (~2/s) | `{peak_hz,peak_mag}` |
 
-`ble.spam`, `sensors.mic`, `wifi.wardrive` follow the same pattern (not yet
-wired).
+### `emit_arm` / `emit_fire` / `emit_status` — the emitting tools
+
+Two-step (ADR-0008 §1) — the serial mirror of `src/confirm.h`. One pending
+arm at a time, 60 s window.
+
+```
+>{"id":8,"op":"emit_arm","tool":"ir.tvbgone","params":{}}
+<{"id":8,"ok":true,"token":"d5f8a5","expires_ms":60000}
+>{"id":9,"op":"emit_fire","token":"d5f8a5"}
+<{"id":9,"ok":true,"result":{"sent":39}}
+```
+
+`emit_arm` errors: `busy`, `unknown_tool`, `capability_disabled`,
+`prepare_failed`, `missing_tool`. `emit_fire` errors: `no_pending`,
+`bad_token`, `expired`. `emit_status` → `{armed, tool}`.
+
+| tool | params | result |
+|---|---|---|
+| `ir.tvbgone` | — | `{sent:N}` (full code sweep, blocks ~5 s) |
+| `ir.replay` | `{raw:[µs,…]}` or `{proto,value:"0x…",bits}` | `{sent:bool}` |
+| `ble.hid` | `{text}` | `{typed:N}` or `{error:"not_paired"}` (arm brings up the advert) |
+| `usb.hid` | `{text}` | `{typed:N}` (`sferic-usbhid` build only) |
+
+`ir.capture` also has a plain `run` op = learn: `{ms}` → `{protocol,value,
+bits,raw:[…]}` or `{error:"timeout"}`.
 
 ## Not yet
 

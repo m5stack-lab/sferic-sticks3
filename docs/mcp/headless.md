@@ -63,18 +63,25 @@ knows what it can launch.
 | `ble.scan` | `{count, devices:[{addr,addr_type,name,rssi,connectable,services}]}` | blocking scan, `{"ms":…}`; BLE + SoftAP coexist so no radio guard |
 | `wifi.probe` | `{total, uniq, probes:[{mac,ssid,rssi,count}]}` | channel-hops for `{"ms":…}` (1000–20000, def 4000), blocking; `radio_busy` guard |
 | `ir.decode` | `{protocol,value,bits}` \| `{protocol:"RAW",samples}` \| `{error:"timeout"}` | listens up to `{"ms":…}` (200–15000, def 3000), blocking; GPIO RX, no radio |
-| everything else | `null` | emits and must stay behind arm/confirm (`ir.tvbgone`, `ir.capture` replay, `*.hid`), or is genuinely streaming (`wifi.monitor`, `wifi.handshake`, `wifi.deauth`, `ble.spam`, `sensors.mic`) and wants a start/stop + strike-stream shape, not one-shot |
+| `ir.capture` | learn one-shot — `{protocol,value,bits,raw:[…]}` | GPIO RX, non-emitting |
 
 **These `run()`s block `loop()` for their duration** (the UI freezes, the
 serial channel pauses) — acceptable for one-shot scans over the collector
-link; a job/async model comes with the streaming tools.
+link.
 
-Emitting tools stay gated regardless of surface — headless or not, firing
-needs an explicit confirm (ADR-0008 §1).
+## Streaming tools — `stream_start` / `stream_stop`
 
-## Streaming
+`run()` is one-shot. The long-running tools instead have a background
+session (`src/stream.cpp`): one at a time, emitting `!`-prefixed NDJSON
+strikes until stopped. Wired: `wifi.monitor`, `wifi.deauth`,
+`wifi.handshake`, `wifi.wardrive`, `wifi.portal`, `ble.spam`, `sensors.mic`.
+See `docs/mcp/serial-transport.md`.
 
-`run()` is one-shot request/response. Genuinely long-running tools (handshake
-capture, packet monitor, a motion watch) run as a `Screen` on-device or,
-later, as an MCP job that streams a **flash** of strikes (ADR-0003 §6).
-`/api/tools/run` and the serial `run` op are not streaming endpoints.
+## Emitting tools — `emit_arm` / `emit_fire`
+
+`ir.tvbgone`, `ir.replay`, `ble.hid`, `usb.hid` are never a one-call fire
+(ADR-0008 §1). `emit_arm` returns a token + a 60 s window; `emit_fire` with
+that token runs the action. `src/emit.cpp`.
+
+Every station capability now has a headless path: one-shot `run`, a
+`stream_*` session, or `emit_arm`/`emit_fire`.
