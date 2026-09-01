@@ -24,6 +24,7 @@ class Hal {
   // --- input ---
   BtnEvent event(Btn b);  // returns and clears this frame's event for b
   bool held(Btn b) const;
+  void injectNav(Btn b, BtnEvent e);  // desk-test nav from the serial channel
 
   // --- display ---
   M5GFX& gfx() { return M5.Display; }
@@ -62,7 +63,6 @@ class Hal {
   };
   BtnState a_, b_;
   void poll(BtnState& s, bool raw, uint32_t now);
-  void pollSerial();  // 'a'/'A'/'b'/'B' -> Click/Hold, for on-desk testing
 
   // --- screen sleep ---
   uint8_t bright_ = kDefaultBright;      // configured awake brightness, 0..100

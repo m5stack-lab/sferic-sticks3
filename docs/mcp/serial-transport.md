@@ -1,0 +1,102 @@
+# Serial transport — station ↔ collector over USB
+
+**Status:** implemented (milestone 2). Firmware: `src/serial_control.cpp`.
+**Relates to:** ADR-0003 §6 (station↔server link), ADR-0008 §1 (MCP = full
+control plane).
+
+The first real `StationTransport` for `sferic-collector`: a tethered station
+on USB. Over serial the 2.4 GHz radio is idle (no SoftAP, no STA), so every
+toolset is reachable — unlike the on-device Web UI, which owns the radio
+while it is up.
+
+Milestone 3 (station → Pi over WiFi/WireGuard) reuses these message shapes
+over a WebSocket/MQTT frame instead of a line.
+
+## Framing
+
+One UTF-8 line per message. The link is shared with human log output, so:
+
+| Prefix | Direction | Meaning |
+|---|---|---|
+| `>` | host → station | a command, `>` + compact JSON + `\n` |
+| `<` | station → host | a reply, `<` + compact JSON + `\n` |
+| anything else | station → host | log line — the collector ignores it |
+
+Bare `a` `A` `b` `B` bytes (no `>`), outside a command line, still drive the
+menu for desk testing. A command line over `kMaxLine` (1024) bytes is
+dropped with `line_overflow`.
+
+## Commands
+
+Every command carries an integer `id`; the reply echoes it. `id` may be `0`
+for fire-and-forget. Replies are `{"id":N,"ok":true,...}` or
+`{"id":N,"ok":false,"error":"<code>"}`.
+
+### `hello` — capability declaration (ADR-0003 §3)
+
+```
+>{"id":1,"op":"hello"}
+<{"id":1,"ok":true,"station":{
+    "id":"stick-6e27ac","model":"m5stack-sticks3",
+    "fw_version":"0.1.0 v0.1.0-8-ga03f79d5-dirty",
+    "toolsets":["wifi","ble","ir","sensors"],
+    "radios":["wifi-2g4","ble","ir-tx","ir-rx"]}}
+```
+
+`id` is `stick-` + the low 6 hex of the eFuse MAC — stable per device, no
+NVS. `toolsets` is `registry.toolsets()`; `radios` is static for now.
+
+### `status`
+
+```
+>{"id":2,"op":"status"}
+<{"id":2,"ok":true,"uptime_s":23,"heap":286860,"batt":99,"on_usb":false,
+  "awake":true,"capture":{"frames":0,"used":0,"cap":0,"recording":false,"full":false}}
+```
+
+### `tools` — the registry (ADR-0004)
+
+```
+>{"id":3,"op":"tools"}
+<{"id":3,"ok":true,"tools":[
+    {"id":"sensors.motion","name":"Motion / Tamper","toolset":"sensors",
+     "summary":"BMI270 movement watch","enabled":true,"has_run":true}, ...]}
+```
+
+### `run` — headless dispatch through `Registry::run`
+
+```
+>{"id":4,"op":"run","tool":"sensors.motion","params":{}}
+<{"id":4,"ok":true,"result":{"ax":-0.13,"ay":-0.99,"az":0.13,
+    "accel_dev_g":0.006,"gyro_dps":0.3,"moving":false,"face":"bottom"}}
+```
+
+`params` (object or omitted) is serialized and passed through as the opaque
+params string. Errors, matching the `RunOutcome` → MCP vocabulary:
+
+| `error` | when |
+|---|---|
+| `capability_not_present` | no such tool id |
+| `capability_disabled` | tool toggled off |
+| `device_only` | registered + enabled, but no `Tool::run` yet (menu-only) |
+| `missing_tool` | no `tool` field |
+
+Today only `sensors.motion` / `sensors.gesture` return `ok`; every other
+tool is `device_only` until it grows a headless `run()` (ADR-0003 §8).
+Emitting tools stay behind arm/confirm regardless — a headless fire will
+need an explicit confirm token (ADR-0008 §1).
+
+### `set` — enable / disable a tool (persists to NVS)
+
+```
+>{"id":5,"op":"set","tool":"ir.tvbgone","enabled":false}
+<{"id":5,"ok":true,"enabled":false}
+```
+
+## Not yet
+
+Flash `open`/`close` control lines and the NDJSON strike stream
+(`strike-format.md` "on the wire") — added with the first streaming tool's
+headless path. `pcap` pull over serial already exists as the base64
+`---PCAP-BEGIN/END---` export from `Settings > Capture`; a framed `op` for
+it comes later.

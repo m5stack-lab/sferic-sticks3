@@ -31,18 +31,13 @@ void Hal::poll(BtnState& s, bool raw, uint32_t now) {
   }
 }
 
-void Hal::pollSerial() {
-  // One nav char per frame, and only once the last event has been consumed,
-  // so a burst of chars produces one press each instead of collapsing.
-  if (!Serial.available()) return;
-  if (a_.pending != BtnEvent::None || b_.pending != BtnEvent::None) return;
-  switch (Serial.read()) {
-    case 'a': a_.pending = BtnEvent::Click; break;
-    case 'A': a_.pending = BtnEvent::Hold; break;
-    case 'b': b_.pending = BtnEvent::Click; break;
-    case 'B': b_.pending = BtnEvent::Hold; break;
-    default: break;
-  }
+void Hal::injectNav(Btn b, BtnEvent e) {
+  // Desk-test nav forwarded from the serial channel (SerialControl owns the
+  // UART). Respects the one-event-per-frame rule and wakes the screen, so
+  // 'a'/'b' over serial behaves like a real press.
+  BtnState& s = (b == Btn::A) ? a_ : b_;
+  if (s.pending == BtnEvent::None) s.pending = e;
+  poke();
 }
 
 void Hal::update() {
@@ -55,11 +50,11 @@ void Hal::update() {
 
   if (!awake_) {
     // Asleep: the backlight is off but the firmware and any running tool keep
-    // ticking. The first input just wakes the screen and is swallowed here so
-    // it doesn't also drive the menu.
-    const bool edge = (aRaw && !a_.down) || (bRaw && !b_.down) || Serial.available();
+    // ticking. The first physical press wakes the screen and is swallowed here
+    // so it doesn't also drive the menu. (Serial nav wakes via injectNav ->
+    // poke(), which runs before this in loop().)
+    const bool edge = (aRaw && !a_.down) || (bRaw && !b_.down);
     if (edge) {
-      while (Serial.available()) Serial.read();
       poke();  // restores brightness, sets woke_, resets the idle timer
       // Seed button state as already-held so the wake press yields no event.
       a_.down = aRaw; a_.holdFired = aRaw; a_.pending = BtnEvent::None;
@@ -70,12 +65,11 @@ void Hal::update() {
 
   poll(a_, aRaw, now);
   poll(b_, bRaw, now);
-  pollSerial();
 
-  // Only a debounced Click/Hold (or a serial nav char, which also lands as a
-  // pending event) counts as activity. Checking the raw level here meant a
-  // stuck or noisy button line pinned the screen awake forever; a stuck line
-  // now fires at most one Hold, then latches quiet.
+  // Only a debounced Click/Hold (or a serial nav char injected via injectNav,
+  // which also lands as a pending event) counts as activity. Checking the raw
+  // level here meant a stuck or noisy button line pinned the screen awake
+  // forever; a stuck line now fires at most one Hold, then latches quiet.
   if (a_.pending != BtnEvent::None || b_.pending != BtnEvent::None)
     lastAct_ = now;
 

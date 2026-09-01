@@ -3,6 +3,7 @@
 #include "hal.h"
 #include "menu_tree.h"
 #include "registry.h"
+#include "serial_control.h"
 #include "ui.h"
 
 void setup() {
@@ -18,6 +19,7 @@ void setup() {
 }
 
 void loop() {
+  serialCtl.poll();  // headless command channel (collector transport)
   hal.update();
   ui.tick();
   if (ui.empty()) ui.push(makeRootMenu());  // never fall through to a blank screen

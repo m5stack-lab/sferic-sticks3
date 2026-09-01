@@ -72,6 +72,16 @@ hand-edit that header.
 (`sensors.motion`, `sensors.gesture`) expose it on the station for now;
 `/api/tools` reports `has_run` per tool. ([`docs/mcp/headless.md`](docs/mcp/headless.md))
 
+## Collector link
+
+A tethered station also answers a headless command channel over USB serial —
+`>{"op":"..."}` lines in, `<{...}` lines out, coexisting with log output.
+`hello` (capability declaration), `status`, `tools`, `run` (same
+`Registry::run` dispatch), `set`. This is the milestone-2 transport for
+[`ry-ops/sferic-collector`](https://github.com/ry-ops/sferic-collector); over
+serial the radio is free, so every toolset is reachable once it has a
+headless path. ([`docs/mcp/serial-transport.md`](docs/mcp/serial-transport.md))
+
 ## Captures
 
 No SD slot, so 802.11 captures go to a **512 KB PSRAM pcap buffer**
@@ -90,6 +100,7 @@ src/registry.*   tool registry + NVS-persisted enable flags
 src/menu_tree.*  registerBuiltinTools() + the live menu
 src/pcap.*       PSRAM pcap capture buffer
 src/confirm.h    two-step arm/confirm guard
+src/serial_control.*  headless command channel (collector transport)
 src/<tool>.*     one screen per tool
 web/             web UI sources -> src/webui_html.h via scripts/gen_webui.py
 docs/adr/        architecture decision records (0001–0008)
