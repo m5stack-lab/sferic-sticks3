@@ -1,14 +1,14 @@
 #include "tools_screen.h"
 
+#include <cstdio>
+
 #include "hal.h"
 #include "theme.h"
 #include "ui_kit.h"
 #include "registry.h"
 
 namespace {
-constexpr int kTitleH = 18;
-constexpr int kRowH = 14;
-int visibleRows() { return (hal.h() - kTitleH - 10) / kRowH; }
+int visibleRows() { return kit::listRows(); }
 }  // namespace
 
 void ToolsScreen::tick() {
@@ -60,32 +60,21 @@ void ToolsScreen::tick() {
 
 void ToolsScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
   const auto& tools = registry.all();
 
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("Settings  Tools");
+  char t[28];
+  std::snprintf(t, sizeof(t), "Tools  %d/%d", sel_ + 1, (int)tools.size());
+  kit::begin(t, th.fg);
 
   const int rows = visibleRows();
   for (int i = 0; i < rows && (top_ + i) < (int)tools.size(); ++i) {
     const int idx = top_ + i;
-    const int y = kTitleH + i * kRowH;
-    const Tool& t = tools[idx];
-    const bool on = registry.enabled(t.id);
-    const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
-    g.setTextColor(onSel ? th.fg : (on ? th.ok : th.fgDim),
-                   onSel ? th.selBg : th.bg);
-    g.setCursor(4, y + 3);
-    g.printf("[%c] %-6s %s", on ? 'x' : ' ', toolsetLabel(t.toolset),
-             t.name.c_str());
+    const Tool& tl = tools[idx];
+    const bool on = registry.enabled(tl.id);
+    kit::row(i, tl.name.c_str(), idx == sel_, tl.toolset.c_str(),
+             toolsetAccent(tl.toolset.c_str()), on ? 'x' : 'o',
+             on ? th.ok : th.fgDim);
   }
 
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A next  B toggle  B(hold) back");
+  kit::end("A next   A- prev   B toggle   B- back");
 }

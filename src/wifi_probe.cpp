@@ -100,15 +100,14 @@ void WifiProbeScreen::tick() {
     pop();
     return;
   }
-  if (a == BtnEvent::Hold) {
-    entries_.clear();
-    total_ = 0;
-    top_ = 0;
+  if (a == BtnEvent::Click && !entries_.empty()) {
+    top_ = (top_ + 1) % (int)entries_.size();
     dirty_ = true;
-  } else if (a == BtnEvent::Click) {
-    top_++;
+  } else if (a == BtnEvent::Hold && !entries_.empty()) {
+    top_ = (top_ - 1 + (int)entries_.size()) % (int)entries_.size();
     dirty_ = true;
   }
+  if (kit::marqueeAnimating()) dirty_ = true;
 
   const uint32_t now = hal.nowMs();
   bool got = false;
@@ -137,40 +136,29 @@ void WifiProbeScreen::tick() {
 }
 
 void WifiProbeScreen::draw() {
-  const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("Probes  %u uniq / %u  ch%d", (unsigned)entries_.size(),
-           (unsigned)total_, ch_);
+  char t[40];
+  std::snprintf(t, sizeof(t), "Probe / Beacon  ch%d", ch_);
+  kit::begin(t, toolsetAccent("wifi"));
 
-  // most recent first
+  if (entries_.empty()) {
+    kit::headline("0", theme().fgDim);
+    kit::end("B- back");
+    return;
+  }
   std::vector<const Entry*> v;
   for (const auto& e : entries_) v.push_back(&e);
   std::sort(v.begin(), v.end(),
             [](const Entry* x, const Entry* y) { return x->last > y->last; });
+  if (top_ >= (int)v.size()) top_ = 0;
+  const Entry* e = v[top_];
 
-  const int rows = (hal.h() - kTitleH - 10) / 11;
-  if (top_ > (int)v.size() - rows) top_ = 0;
-  if (top_ < 0) top_ = 0;
-
-  g.setTextSize(1);
-  for (int i = 0; i < rows && (top_ + i) < (int)v.size(); ++i) {
-    const Entry* e = v[top_ + i];
-    g.setTextColor(th.fg, th.bg);
-    g.setCursor(2, kTitleH + 3 + i * 11);
-    g.printf("%02X%02X%02X%02X%02X%02X %-8s %d", e->mac[0], e->mac[1], e->mac[2],
-             e->mac[3], e->mac[4], e->mac[5],
-             e->ssid.empty() ? "<any>" : e->ssid.substr(0, 8).c_str(),
-             e->rssi);
-  }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A scroll  A(hold) clear  B(hold) back");
+  char sub[48];
+  std::snprintf(sub, sizeof(sub), "%02X%02X%02X%02X%02X%02X  %d dBm  x%u",
+                e->mac[0], e->mac[1], e->mac[2], e->mac[3], e->mac[4], e->mac[5],
+                e->rssi, (unsigned)e->count);
+  kit::detail(e->ssid.empty() ? "<any SSID>" : e->ssid.c_str(), sub, top_ + 1,
+              (int)v.size());
+  kit::end("< >   B- back");
 }
 
 // ---------------- headless ----------------

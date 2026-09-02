@@ -10,6 +10,7 @@
 #include <USB.h>
 #include <USBHIDKeyboard.h>
 
+#include <cstdio>
 #include <string>
 
 namespace {
@@ -86,32 +87,22 @@ void UsbHidScreen::tick() {
 
 void UsbHidScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("USB  HID Keyboard");
+  kit::begin("HID Keyboard", toolsetAccent("ble"));
 
-  int y = kTitleH + 8;
-  g.setTextColor(typeArm_.armed ? th.bad : th.warn, th.bg);
-  g.setCursor(6, y);
-  g.print(typeArm_.armed ? "ARMED - B again to type"
-                        : "plug into a host, press B");
-  g.setTextColor(th.fg, th.bg);
-  g.setCursor(6, y + 18);
-  g.printf("payload %d/%d:", payload_ + 1, kPayloadCount);
-  g.setCursor(6, y + 32);
-  g.setTextColor(th.fg, th.bg);
+  kit::headline(typeArm_.armed ? "ARMED" : "READY",
+                typeArm_.armed ? th.bad : th.warn);
+  kit::line(0, typeArm_.armed ? "B again types it"
+                              : "plug into a host, press B",
+            th.fgDim);
+  char l[40];
+  std::snprintf(l, sizeof(l), "payload %d/%d", payload_ + 1, kPayloadCount);
+  kit::line(1, l, th.fgDim);
   std::string pv = kPayloads[payload_];
   if (!pv.empty() && pv.back() == '\n') pv.pop_back();
-  g.print(pv.substr(0, 34).c_str());
+  kit::marquee(pv.c_str(), 8, kit::BODY_Y + 84, kit::W - 16, 2, th.fg, 0);
 
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print(typeArm_.armed ? "B type  A cancel  B(hold) back"
-                        : "A payload  B arm  B(hold) back");
+  kit::end(typeArm_.armed ? "B type   A cancel   B- back"
+                          : "A payload   B arm   B- back");
 }
 
 #else  // stub so the file always compiles

@@ -1,5 +1,7 @@
 #include "capture_screen.h"
 
+#include <cstdio>
+
 #include "hal.h"
 #include "theme.h"
 #include "ui_kit.h"
@@ -34,30 +36,18 @@ void CaptureScreen::tick() {
 
 void CaptureScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("Settings  Capture");
+  kit::begin("Capture", th.fg);
 
-  int y = kTitleH + 10;
-  g.setTextColor(th.fg, th.bg);
-  g.setCursor(6, y);
-  g.printf("frames  %u", (unsigned)capture.frames());
-  g.setCursor(6, y + 14);
-  g.printf("used    %u KB", (unsigned)(capture.used() / 1024));
-  g.setCursor(6, y + 28);
-  g.printf("cap     %u KB", (unsigned)(capture.capacity() / 1024));
-  g.setCursor(6, y + 42);
-  g.setTextColor(capture.recording()  ? th.ok
-                 : capture.full()     ? th.bad
-                                      : th.fgDim,
-                 th.bg);
-  g.print(capture.recording() ? "recording" : capture.full() ? "full" : "idle");
+  const bool rec = capture.recording();
+  kit::headline(rec ? "REC" : capture.full() ? "FULL" : "IDLE",
+                rec ? th.ok : capture.full() ? th.bad : th.fgDim);
 
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A clear  B export  B(hold) back");
+  char l[40];
+  std::snprintf(l, sizeof(l), "frames  %u", (unsigned)capture.frames());
+  kit::line(0, l);
+  std::snprintf(l, sizeof(l), "%u / %u KB", (unsigned)(capture.used() / 1024),
+               (unsigned)(capture.capacity() / 1024));
+  kit::line(1, l, th.fgDim);
+
+  kit::end("A clear   B export   B- back");
 }

@@ -4,6 +4,7 @@
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 
+#include <cstdio>
 #include <string>
 
 #include "hal.h"
@@ -154,50 +155,34 @@ void TvBGoneScreen::tick() {
 
 void TvBGoneScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("Infrared  TV-B-Gone");
+  kit::begin("TV-B-Gone", toolsetAccent("ir"));
 
-  g.setCursor(6, kTitleH + 14);
+  char l[40];
   if (arm_.armed && state_ != State::Firing) {
-    g.setTextColor(th.bad, th.bg);
-    g.print("ARMED");
-    g.setCursor(6, kTitleH + 30);
-    g.setTextColor(th.fg, th.bg);
-    g.printf("B again -> fire %d codes", kCount);
-    g.setTextColor(th.fgDim, th.bg);
-    g.setCursor(4, hal.h() - 9);
-    g.print("B fire  A cancel  B(hold) back");
+    kit::headline("ARMED", th.bad);
+    std::snprintf(l, sizeof(l), "B fires %d codes", kCount);
+    kit::line(0, l);
+    kit::end("B fire   A cancel   B- back");
     return;
   }
   switch (state_) {
     case State::Idle:
-      g.setTextColor(th.fg, th.bg);
-      g.printf("%d codes ready.", kCount);
-      g.setCursor(6, kTitleH + 30);
-      g.print("Aim at the TV, press B.");
+      kit::headline("READY", th.fgDim);
+      std::snprintf(l, sizeof(l), "%d codes loaded", kCount);
+      kit::line(0, l, th.fgDim);
+      kit::line(1, "aim at the TV, press B", th.fgDim);
       break;
     case State::Firing:
-      g.setTextColor(th.warn, th.bg);
-      g.printf("Sending %d/%d", idx_, kCount);
-      g.setCursor(6, kTitleH + 30);
-      g.setTextColor(th.fg, th.bg);
-      if (idx_ > 0 && idx_ <= kCount) g.print(kCodes[idx_ - 1].name);
+      std::snprintf(l, sizeof(l), "%d/%d", idx_, kCount);
+      kit::headline(l, th.warn);
+      if (idx_ > 0 && idx_ <= kCount) kit::line(0, kCodes[idx_ - 1].name);
       break;
     case State::Done:
-      g.setTextColor(th.ok, th.bg);
-      g.printf("Done - %d codes sent", kCount);
-      g.setCursor(6, kTitleH + 30);
-      g.setTextColor(th.fg, th.bg);
-      g.print("B again to repeat.");
+      kit::headline("DONE", th.ok);
+      std::snprintf(l, sizeof(l), "%d codes sent", kCount);
+      kit::line(0, l, th.fgDim);
+      kit::line(1, "B again to repeat", th.fgDim);
       break;
   }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("B arm  B(hold) back");
+  kit::end("B arm   B- back");
 }

@@ -64,29 +64,24 @@ void IrDecodeScreen::tick() {
 
 void IrDecodeScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  const bool recent = hal.nowMs() - lastHit_ < 400;
-  g.print(recent ? "IR Decode  <<" : "IR Decode  listening");
+  const bool recent = hal.nowMs() - lastHit_ < 500;
+  kit::begin(recent ? "Protocol Decode  <<" : "Protocol Decode",
+             toolsetAccent("ir"));
 
-  for (size_t i = 0; i < hist_.size(); ++i) {
-    g.setTextColor(i == 0 ? th.ok : th.fg, th.bg);
-    g.setCursor(4, kTitleH + 6 + (int)i * 13);
-    g.print(hist_[i].c_str());
-  }
   if (hist_.empty()) {
-    g.setTextColor(th.fg, th.bg);
-    g.setCursor(6, kTitleH + 16);
-    g.print("Aim a remote at the top edge.");
+    kit::headline("...", th.fgDim);
+    kit::line(0, "aim a remote at the top edge", th.fgDim);
+    kit::end("B- back");
+    return;
   }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("B(hold) back");
+  // headline = latest, marqueed; then the two prior hits
+  const int top = kit::TITLE_H;
+  hal.gfx().fillRect(0, top, kit::W, kit::H - 12 - top, th.bg);
+  kit::marquee(hist_[0].c_str(), 8, top + 10, kit::W - 16, 3,
+               recent ? th.ok : th.fg, 0);
+  for (size_t i = 1; i < hist_.size() && i < 3; ++i)
+    kit::line((int)i - 1, hist_[i].c_str(), th.fgDim);
+  kit::end("B- back");
 }
 
 // ---------------- headless ----------------

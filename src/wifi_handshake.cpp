@@ -119,10 +119,14 @@ void WifiHandshakeScreen::tick() {
     Serial.printf("[handshake] export %u frames %u bytes\n", capture.frames(),
                   (unsigned)capture.used());
     capture.dumpBase64(Serial);
-  } else if (a == BtnEvent::Click) {
-    top_++;
+  } else if (a == BtnEvent::Click && !aps_.empty()) {
+    top_ = (top_ + 1) % (int)aps_.size();
+    dirty_ = true;
+  } else if (a == BtnEvent::Hold && !aps_.empty()) {
+    top_ = (top_ - 1 + (int)aps_.size()) % (int)aps_.size();
     dirty_ = true;
   }
+  if (kit::marqueeAnimating()) dirty_ = true;
 
   bool got = false;
   while (g_tail != g_head) {
@@ -264,31 +268,23 @@ void wifiHandshakeStreamStop() {
 }
 
 void WifiHandshakeScreen::draw() {
-  const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("Handshake  ch%d  %uKB%s", ch_, (unsigned)(capture.used() / 1024),
-           capture.full() ? " FULL" : "");
+  char t[44];
+  std::snprintf(t, sizeof(t), "Handshake  ch%d  %uKB%s", ch_,
+                (unsigned)(capture.used() / 1024), capture.full() ? " FULL" : "");
+  kit::begin(t, toolsetAccent("wifi"));
 
-  const int rows = (hal.h() - kTitleH - 10) / kRowH;
-  if (top_ > (int)aps_.size() - rows) top_ = 0;
-  if (top_ < 0) top_ = 0;
-
-  for (int i = 0; i < rows && (top_ + i) < (int)aps_.size(); ++i) {
-    const Ap& ap = aps_[top_ + i];
-    const bool hs = ap.eapol >= 2;
-    g.setTextColor(hs ? th.ok : ap.eapol ? th.warn : th.fg,
-                   th.bg);
-    g.setCursor(2, kTitleH + 3 + i * kRowH);
-    g.printf("%-11s e%u %s", ap.ssid.substr(0, 11).c_str(), ap.eapol,
-             hs ? "HS" : "");
+  if (aps_.empty()) {
+    kit::headline("waiting", theme().fgDim);
+    kit::end("B export   B- back");
+    return;
   }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A scroll  B export  B(hold) back");
+  if (top_ >= (int)aps_.size()) top_ = 0;
+  const Ap& ap = aps_[top_];
+  const bool hs = ap.eapol >= 4;
+  char sub[48];
+  std::snprintf(sub, sizeof(sub), "%02X%02X%02X  %d dBm  e%u%s",
+                ap.bssid[3], ap.bssid[4], ap.bssid[5], ap.rssi, ap.eapol,
+                hs ? "  HS!" : "");
+  kit::detail(ap.ssid.c_str(), sub, top_ + 1, (int)aps_.size());
+  kit::end("< >   B export   B- back");
 }

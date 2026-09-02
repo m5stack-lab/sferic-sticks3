@@ -4,6 +4,8 @@
 #include <M5Unified.h>
 #include <arduinoFFT.h>
 
+#include <cstdio>
+
 #include "hal.h"
 #include "theme.h"
 #include "ui_kit.h"
@@ -82,16 +84,12 @@ void MicSpectrumScreen::tick() {
 void MicSpectrumScreen::draw() {
   const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("Mic Spectrum  %s", held_ ? "(hold)" : "");
+  kit::begin(held_ ? "Mic Spectrum  hold" : "Mic Spectrum",
+             toolsetAccent("sensors"));
 
-  const int gx = 2, gy = kTitleH + 4;
-  const int gw = hal.w() - 4;
-  const int gh = hal.h() - kTitleH - 24;
+  const int gx = 4, gy = kit::BODY_Y + 4;
+  const int gw = kit::W - 8;
+  const int gh = kit::BODY_H - 30;
 
   // one bar per column, averaging bins into it
   const float norm = peakMag_ > 1.0f ? peakMag_ : 1.0f;
@@ -105,12 +103,14 @@ void MicSpectrumScreen::draw() {
     g.drawFastVLine(gx + x, gy + gh - h, h, c);
   }
 
+  char l[24];
+  std::snprintf(l, sizeof(l), "peak %.0f Hz", peakHz_);
+  g.setTextSize(2);
   g.setTextColor(th.fg, th.bg);
-  g.setCursor(4, hal.h() - 18);
-  g.printf("peak %.0f Hz", peakHz_);
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A hold  B(hold) back");
+  g.setCursor(8, gy + gh + 4);
+  g.print(l);
+
+  kit::end("A hold   B- back");
 }
 
 // ---------------- headless streaming ----------------
