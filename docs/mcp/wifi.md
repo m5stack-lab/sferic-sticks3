@@ -36,13 +36,24 @@ Scan for nearby access points.
   "count": 19,
   "aps": [
     { "ssid": "example", "bssid": "aa:bb:cc:dd:ee:ff", "rssi": -52,
-      "channel": 6, "band": "2.4", "encryption": "WPA2", "hidden": false }
+      "channel": 6, "band": "2.4", "encryption": "WPA2", "hidden": false,
+      "security": { "vendor": "TP-LINK TECHNOLOGIES CO.,LTD.",
+        "cve_vendor_known": true, "matched_product": "archer_ax53_firmware",
+        "cve_total": 36, "cve_ids": ["CVE-2026-30818", "…"], "note": "…" } }
   ]
 }
 ```
 
 `encryption` enum: `OPEN` `WEP` `WPA` `WPA2` `WPA12` `WPA2E` `WPA3` `WPA23` `?`.
 `aps` sorted by `rssi` descending.
+
+`security` is added by the **collector**, not the station — the firmware's
+wire reply has no such field (ADR-0010, `sferic-collector`). It's a
+best-effort vendor lookup (OUI → cve-search) attached on ingest; absent
+entirely on a station with no network path to the internet, and
+`{"vendor": null}` when the BSSID's manufacturer can't be resolved. A
+`matched_product`/`cve_total` hit is a heuristic lead from the AP's own
+SSID text, not a confirmed version match — see the ADR for why.
 
 ---
 
