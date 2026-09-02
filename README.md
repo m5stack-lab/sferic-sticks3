@@ -107,7 +107,7 @@ src/confirm.h    two-step arm/confirm guard
 src/serial_control.*  headless command channel (collector transport)
 src/<tool>.*     one screen per tool
 web/             web UI sources -> src/webui_html.h via scripts/gen_webui.py
-docs/adr/        architecture decision records (0001–0008)
+docs/adr/        architecture decision records (0001–0011)
 docs/mcp/        per-toolset MCP contracts + strike/pcap formats
 test/            host unit tests — `pio test -e native`
 ```

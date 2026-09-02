@@ -5,7 +5,7 @@
 #include <cstring>
 
 namespace {
-uint8_t g_idx = 0;  // default: Light
+uint8_t g_idx = kDefaultTheme;
 constexpr const char* kNs = "sferic";
 constexpr const char* kKey = "disp.theme";
 }  // namespace
@@ -25,7 +25,7 @@ void setThemeIndex(uint8_t i) {
 void loadThemePref() {
   Preferences p;
   if (p.begin(kNs, /*readOnly=*/true)) {
-    g_idx = p.getUChar(kKey, 0);
+    g_idx = p.getUChar(kKey, kDefaultTheme);
     p.end();
   }
   if (g_idx >= kThemeCount) g_idx = 0;

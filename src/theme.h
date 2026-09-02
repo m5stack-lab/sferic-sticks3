@@ -49,6 +49,8 @@ struct Theme {
   uint16_t accentNrf24;
 };
 
+// Order is stable (NVS stores the index). Solarized Dark is the default
+// (kDefaultTheme); Light is the alt.
 inline constexpr Theme kThemes[] = {
     {"Light", sol::base3, sol::base2, sol::base00, sol::base1, sol::base3,
      sol::base1, sol::base2, sol::green, sol::yellow, sol::red, sol::blue,
@@ -58,6 +60,7 @@ inline constexpr Theme kThemes[] = {
      sol::cyan, sol::orange, sol::green, sol::violet, sol::magenta},
 };
 constexpr uint8_t kThemeCount = sizeof(kThemes) / sizeof(kThemes[0]);
+constexpr uint8_t kDefaultTheme = 1;  // Solarized Dark
 
 const Theme& theme();              // the active palette
 uint8_t themeIndex();
