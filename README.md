@@ -82,6 +82,10 @@ A tethered station also answers a headless command channel over USB serial —
 serial the radio is free, so every toolset is reachable once it has a
 headless path. ([`docs/mcp/serial-transport.md`](docs/mcp/serial-transport.md))
 
+The collector also auto-enriches `wifi.scan`/`ble.scan` results with a
+best-effort vendor + known-CVE lead per device (OUI lookup + cve-search) —
+see [ADR-0010](docs/adr/0010-cve-enrichment.md).
+
 ## Captures
 
 No SD slot, so 802.11 captures go to a **512 KB PSRAM pcap buffer**

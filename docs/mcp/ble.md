@@ -31,16 +31,25 @@ Snapshot of advertising BLE devices.
   "scanned_at": "2026-08-30T21:14:03Z",
   "count": 30,
   "devices": [
-    { "address": "aa:bb:cc:dd:ee:ff", "address_type": "random",
+    { "address": "aa:bb:cc:dd:ee:ff", "address_type": "public",
       "name": "Widget", "rssi": -61,
       "service_uuids": ["0000180f-0000-1000-8000-00805f9b34fb"],
-      "appearance": 833, "connectable": true }
+      "appearance": 833, "connectable": true,
+      "security": { "vendor": "Espressif Inc.", "cve_vendor_known": true,
+        "note": "…" } }
   ]
 }
 ```
 
 `name` omitted when the device advertises none. `devices` sorted by `rssi`
 descending.
+
+`security` is added by the **collector** on ingest (ADR-0010,
+`sferic-collector`), same as `wifi.scan`'s `aps[]`. Only meaningful for
+`address_type: "public"` — a `"random"` address (the common case for
+privacy-conscious phones/wearables) carries no IEEE-assigned vendor, so
+those entries get no `security` block at all rather than a misleading
+`{"vendor": null}`.
 
 ---
 
