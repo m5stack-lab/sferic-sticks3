@@ -2,6 +2,9 @@
 
 #include <M5Unified.h>
 
+#include <cstdio>
+#include <cstring>
+
 #include "hal.h"
 #include "icons.h"
 #include "theme.h"
@@ -10,6 +13,18 @@ namespace kit {
 
 int listRows() { return BODY_H / ROW_H; }
 int statRows() { return BODY_H / STAT_H; }
+
+namespace {
+// A bold chevron, apex at (ax, ay), arms `half` tall spreading `reach` to the
+// side. dir -1 = points left, +1 = points right. Drawn 2px thick.
+void bigChevron(int ax, int ay, int half, int reach, int dir, uint16_t c) {
+  auto& g = hal.gfx();
+  for (int o = 0; o < 2; ++o) {
+    g.drawLine(ax + o, ay - half, ax - dir * reach + o, ay, c);
+    g.drawLine(ax - dir * reach + o, ay, ax + o, ay + half, c);
+  }
+}
+}  // namespace
 
 void titleBar(const char* text, uint16_t accent) {
   auto& g = hal.gfx();
@@ -42,6 +57,55 @@ void begin(const char* title, uint16_t accent) {
 }
 
 void end(const char* hint) { hintBar(hint); }
+
+void statusBar() {
+  auto& g = hal.gfx();
+  const Theme& th = theme();
+  g.fillRect(0, 0, W, STATUS_H, th.bgAlt);
+  g.fillRect(0, STATUS_H - 2, W, 2, th.accentSubghz);  // violet rule
+  g.setTextSize(1);
+
+  const uint32_t s = hal.nowMs() / 1000;
+  char clk[12];
+  std::snprintf(clk, sizeof(clk), "%lu:%02lu:%02lu", (unsigned long)(s / 3600),
+                (unsigned long)((s / 60) % 60), (unsigned long)(s % 60));
+  g.setTextColor(th.fg, th.bgAlt);
+  g.setCursor(4, 5);
+  g.print(clk);
+
+  char pwr[10];
+  std::snprintf(pwr, sizeof(pwr), "%s%d%%", hal.onUsb() ? "= " : "", hal.battPercent());
+  const int pw = (int)std::strlen(pwr) * 6;
+  g.setTextColor(hal.battPercent() <= 15 ? th.bad : th.fg, th.bgAlt);
+  g.setCursor(W - pw - 4, 5);
+  g.print(pwr);
+}
+
+void carousel(const char* iconKey, uint16_t accent, const char* label) {
+  auto& g = hal.gfx();
+  const Theme& th = theme();
+  const int top = STATUS_H;
+  const int bot = H - HINT_H;
+  g.fillRect(0, top, W, bot - top, th.bg);
+
+  const int iconS = 64;
+  const int iconY = top + 6;
+  if (iconKey && *iconKey) icon::draw(iconKey, W / 2 - iconS / 2, iconY, iconS, accent);
+
+  const int n = (int)std::strlen(label);
+  int sz = 3;  // shrink to fit: long tool names drop to size 2 / 1
+  if (n * 18 > W - 16) sz = 2;
+  if (sz == 2 && n * 12 > W - 12) sz = 1;
+  g.setTextSize(sz);
+  g.setTextColor(th.fg, th.bg);
+  const int lw = n * 6 * sz;
+  g.setCursor((W - lw) / 2, iconY + iconS + (sz == 3 ? 4 : 10));
+  g.print(label);
+
+  const int cy = iconY + iconS / 2;
+  bigChevron(14, cy, 14, 9, -1, th.fgDim);
+  bigChevron(W - 14, cy, 14, 9, +1, th.fgDim);
+}
 
 void row(int slot, const char* label, bool selected, const char* iconKey,
          uint16_t iconColor, char dot, uint16_t dotColor) {

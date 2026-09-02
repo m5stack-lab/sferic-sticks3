@@ -9,7 +9,8 @@ namespace kit {
 
 constexpr int W = 240;
 constexpr int H = 135;
-constexpr int TITLE_H = 20;
+constexpr int STATUS_H = 18;  // persistent status strip (menus)
+constexpr int TITLE_H = 20;   // per-screen title bar (tool detail screens)
 constexpr int HINT_H = 12;
 constexpr int BODY_Y = TITLE_H;
 constexpr int BODY_H = H - TITLE_H - HINT_H;
@@ -33,6 +34,15 @@ void bodyClear();
 // `titleBar` + `bodyClear` in one call; pair with `end(hint)`.
 void begin(const char* title, uint16_t accent);
 void end(const char* hint);
+
+// Persistent top strip for menus: uptime clock left, battery / power right,
+// `bgAlt` ground + accent rule. Screens draw it every frame.
+void statusBar();
+
+// One-item horizontal carousel (root + submenus): a big `iconKey` glyph in
+// `accent`, `label` centred beneath it in size 3, and < > chevrons. Fills
+// the region from STATUS_H to the hint bar.
+void carousel(const char* iconKey, uint16_t accent, const char* label);
 
 // One list row in slot 0..listRows()-1. `iconKey` (icon::draw key, e.g. a
 // toolset id) draws a 20px glyph in `iconColor`; nullptr/"" = none. `dot`:

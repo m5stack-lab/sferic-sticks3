@@ -33,7 +33,6 @@ void ScreenStack::reset() {
 }
 
 namespace {
-int visibleRows() { return kit::listRows(); }
 constexpr int kTitleH = kit::TITLE_H;
 }  // namespace
 
@@ -73,25 +72,19 @@ void MenuScreen::tick() {
     return;
   }
 
-  // keep selection in the visible window
-  const int rows = visibleRows();
-  if (sel_ < top_) { top_ = sel_; dirty_ = true; }
-  if (sel_ >= top_ + rows) { top_ = sel_ - rows + 1; dirty_ = true; }
-
   if (dirty_) { draw(); dirty_ = false; }
 }
 
 void MenuScreen::draw() {
-  kit::begin(title_.c_str(), theme().fg);
-  const int rows = kit::listRows();
-  for (int i = 0; i < rows && (top_ + i) < (int)items_.size(); ++i) {
-    const int idx = top_ + i;
-    const MenuItem& it = items_[idx];
+  kit::statusBar();
+  if (items_.empty()) {
+    kit::carousel(nullptr, theme().fgDim, "empty");
+  } else {
+    const MenuItem& it = items_[sel_];
     const char* key = it.icon.empty() ? nullptr : it.icon.c_str();
-    kit::row(i, it.label.c_str(), idx == sel_, key,
-             key ? toolsetAccent(key) : 0);
+    kit::carousel(key, key ? toolsetAccent(key) : theme().fg, it.label.c_str());
   }
-  kit::end("A next  A- prev  B open  B- back");
+  kit::hintBar("A >   A-hold <   B open   B-hold back");
 }
 
 // ---------------- InfoScreen ----------------
