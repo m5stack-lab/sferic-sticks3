@@ -8,6 +8,7 @@
 #include "ble_common.h"
 #include "ble_gatt.h"
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -15,9 +16,10 @@ constexpr int kRowH = 12;
 int visibleRows() { return (hal.h() - kTitleH - 10) / kRowH; }
 
 uint16_t rssiColor(int rssi) {
-  if (rssi > -60) return TFT_GREEN;
-  if (rssi > -80) return TFT_YELLOW;
-  return TFT_RED;
+  const Theme& th = theme();
+  if (rssi > -60) return th.ok;
+  if (rssi > -80) return th.warn;
+  return th.bad;
 }
 }  // namespace
 
@@ -100,13 +102,14 @@ void BleScanScreen::tick() {
 }
 
 void BleScanScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
   NimBLEScanResults r = scan_ ? scan_->getResults() : NimBLEScanResults();
   const int n = r.getCount();
 
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("BLE  %d dev%s", n,
@@ -124,11 +127,11 @@ void BleScanScreen::draw() {
     const NimBLEAdvertisedDevice* d = r.getDevice(idx);
     if (d == nullptr) continue;
     const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, TFT_NAVY);
+    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
 
     const int rssi = d->getRSSI();
-    g.setTextColor(onSel ? TFT_WHITE : rssiColor(rssi),
-                   onSel ? TFT_NAVY : TFT_BLACK);
+    g.setTextColor(onSel ? th.fg : rssiColor(rssi),
+                   onSel ? th.selBg : th.bg);
     g.setCursor(2, y + 2);
 
     std::string nm = d->haveName() ? d->getName() : std::string("<no name>");
@@ -141,7 +144,7 @@ void BleScanScreen::draw() {
              d->getServiceUUIDCount());
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A next  A(hold) rescan  B open  B(hold) back");
 }
@@ -273,21 +276,22 @@ void BleDetailScreen::tick() {
 }
 
 void BleDetailScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("BLE  decode");
 
   const int rows = (hal.h() - kTitleH - 10) / 12;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   for (int i = 0; i < rows && (top_ + i) < (int)lines_.size(); ++i) {
     g.setCursor(4, kTitleH + 4 + i * 12);
     g.print(lines_[top_ + i].substr(0, 40).c_str());
   }
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print(s_.connectable ? "A scroll  B connect  B(hold) back"
                          : "A scroll  B(hold) back");

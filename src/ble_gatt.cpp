@@ -4,6 +4,7 @@
 
 #include "ble_common.h"
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -93,36 +94,37 @@ void GattScreen::tick() {
 }
 
 void GattScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("BLE  GATT");
 
   g.setTextSize(1);
   if (state_ == State::Start) {
-    g.setTextColor(TFT_YELLOW, TFT_BLACK);
+    g.setTextColor(th.warn, th.bg);
     g.setCursor(6, kTitleH + 14);
     g.printf("Connecting to");
     g.setCursor(6, kTitleH + 28);
     g.print(addr_.c_str());
   } else if (state_ == State::Failed) {
-    g.setTextColor(TFT_RED, TFT_BLACK);
+    g.setTextColor(th.bad, th.bg);
     g.setCursor(6, kTitleH + 14);
     g.print("Connect failed.");
   } else {
     const int rows = (hal.h() - kTitleH - 10) / 11;
     for (int i = 0; i < rows && (top_ + i) < (int)lines_.size(); ++i) {
       const std::string& ln = lines_[top_ + i];
-      g.setTextColor(ln[0] == 'S' ? TFT_CYAN : TFT_LIGHTGREY, TFT_BLACK);
+      g.setTextColor(ln[0] == 'S' ? th.accentBle : th.fg, th.bg);
       g.setCursor(2, kTitleH + 3 + i * 11);
       g.print(ln.substr(0, 40).c_str());
     }
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print(state_ == State::Done ? "A scroll  B back" : "B back");
 }

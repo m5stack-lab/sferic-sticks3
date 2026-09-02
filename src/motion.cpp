@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -53,19 +54,20 @@ void MotionScreen::tick() {
 }
 
 void MotionScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
   const uint32_t now = hal.nowMs();
   const bool moving = (now - lastTrig_) < 700 && events_ > 0;
 
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Motion / Tamper  [%s]", kName[sens_]);
 
   int y = kTitleH + 8;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y);
   g.printf("accel dev  %.3f g", accelDev_);
   g.setCursor(6, y + 14);
@@ -74,14 +76,14 @@ void MotionScreen::draw() {
   g.setTextSize(2);
   g.setCursor(6, y + 34);
   if (moving) {
-    g.setTextColor(TFT_RED, TFT_BLACK);
+    g.setTextColor(th.bad, th.bg);
     g.print("MOTION");
   } else {
-    g.setTextColor(TFT_GREEN, TFT_BLACK);
+    g.setTextColor(th.ok, th.bg);
     g.print("QUIET");
   }
   g.setTextSize(1);
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y + 58);
   if (events_ > 0)
     g.printf("events %lu   last %lus ago", (unsigned long)events_,
@@ -89,7 +91,7 @@ void MotionScreen::draw() {
   else
     g.print("events 0");
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A sens  B reset  B(hold) back");
 }

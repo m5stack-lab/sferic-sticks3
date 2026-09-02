@@ -1,6 +1,7 @@
 #include "tools_screen.h"
 
 #include "hal.h"
+#include "theme.h"
 #include "registry.h"
 
 namespace {
@@ -57,12 +58,13 @@ void ToolsScreen::tick() {
 }
 
 void ToolsScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
   const auto& tools = registry.all();
 
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("Settings  Tools");
@@ -74,15 +76,15 @@ void ToolsScreen::draw() {
     const Tool& t = tools[idx];
     const bool on = registry.enabled(t.id);
     const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, TFT_NAVY);
-    g.setTextColor(onSel ? TFT_WHITE : (on ? TFT_GREEN : TFT_DARKGREY),
-                   onSel ? TFT_NAVY : TFT_BLACK);
+    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
+    g.setTextColor(onSel ? th.fg : (on ? th.ok : th.fgDim),
+                   onSel ? th.selBg : th.bg);
     g.setCursor(4, y + 3);
     g.printf("[%c] %-6s %s", on ? 'x' : ' ', toolsetLabel(t.toolset),
              t.name.c_str());
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A next  B toggle  B(hold) back");
 }

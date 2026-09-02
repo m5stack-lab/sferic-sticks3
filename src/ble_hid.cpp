@@ -8,6 +8,7 @@
 
 #include "ble_common.h"
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -183,38 +184,39 @@ void BleHidScreen::tick() {
 }
 
 void BleHidScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("BLE  HID Keyboard");
 
   int y = kTitleH + 8;
-  g.setTextColor(typeArm_.armed ? TFT_RED
-                 : g_connected  ? TFT_GREEN
-                                : TFT_YELLOW, TFT_BLACK);
+  g.setTextColor(typeArm_.armed ? th.bad
+                 : g_connected  ? th.ok
+                                : th.warn, th.bg);
   g.setCursor(6, y);
   g.print(typeArm_.armed ? "ARMED"
           : g_connected  ? "paired"
                          : "advertising as sferic-kb");
 
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y + 18);
   g.printf("payload %d/%d:", payload_ + 1, kPayloadCount);
   g.setCursor(6, y + 32);
-  g.setTextColor(TFT_WHITE, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   std::string pv = kPayloads[payload_];
   if (!pv.empty() && pv.back() == '\n') pv.pop_back();
   g.print(pv.substr(0, 34).c_str());
   if (sending_) {
     g.setCursor(6, y + 48);
-    g.setTextColor(TFT_CYAN, TFT_BLACK);
+    g.setTextColor(th.accentBle, th.bg);
     g.print("typing...");
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   if (typeArm_.armed)
     g.print("B again -> type   A cancel");

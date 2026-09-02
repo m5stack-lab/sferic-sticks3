@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -59,22 +60,23 @@ void GestureScreen::tick() {
 }
 
 void GestureScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("Sensors  Gesture");
 
   int y = kTitleH + 6;
   g.setTextSize(2);
-  g.setTextColor(TFT_CYAN, TFT_BLACK);
+  g.setTextColor(th.accentBle, th.bg);
   g.setCursor(6, y);
   g.print(orient_);
 
   g.setTextSize(1);
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y + 24);
   g.printf("a %+.2f %+.2f %+.2f", ax_, ay_, az_);
   g.setCursor(6, y + 38);
@@ -82,7 +84,7 @@ void GestureScreen::draw() {
   g.setCursor(6, y + 52);
   g.printf("shakes %lu   last: %s", (unsigned long)shakes_, gesture_);
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A reset  B(hold) back");
 }

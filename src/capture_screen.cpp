@@ -1,6 +1,7 @@
 #include "capture_screen.h"
 
 #include "hal.h"
+#include "theme.h"
 #include "pcap.h"
 
 namespace {
@@ -31,16 +32,17 @@ void CaptureScreen::tick() {
 }
 
 void CaptureScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("Settings  Capture");
 
   int y = kTitleH + 10;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y);
   g.printf("frames  %u", (unsigned)capture.frames());
   g.setCursor(6, y + 14);
@@ -48,13 +50,13 @@ void CaptureScreen::draw() {
   g.setCursor(6, y + 28);
   g.printf("cap     %u KB", (unsigned)(capture.capacity() / 1024));
   g.setCursor(6, y + 42);
-  g.setTextColor(capture.recording()  ? TFT_GREEN
-                 : capture.full()     ? TFT_RED
-                                      : TFT_DARKGREY,
-                 TFT_BLACK);
+  g.setTextColor(capture.recording()  ? th.ok
+                 : capture.full()     ? th.bad
+                                      : th.fgDim,
+                 th.bg);
   g.print(capture.recording() ? "recording" : capture.full() ? "full" : "idle");
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A clear  B export  B(hold) back");
 }

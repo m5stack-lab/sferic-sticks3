@@ -44,6 +44,7 @@ extern ScreenStack ui;
 struct MenuItem {
   std::string label;
   std::function<void()> action;  // run on select; typically ui.push(new ...)
+  std::string icon;  // icon::draw key (toolset id or "gear"/"globe"/…); "" = none
 };
 
 class MenuScreen : public Screen {

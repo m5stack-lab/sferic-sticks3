@@ -6,6 +6,7 @@
 #include <WiFi.h>
 
 #include "hal.h"
+#include "theme.h"
 
 std::vector<PortalHit> g_portalHits;
 
@@ -117,16 +118,17 @@ void EvilPortalScreen::tick() {
 }
 
 void EvilPortalScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("WiFi  Evil Portal");
 
   int y = kTitleH + 8;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y);
   g.printf("ssid   %s", kSsids[ssidIdx_]);
   g.setCursor(6, y + 14);
@@ -134,15 +136,15 @@ void EvilPortalScreen::draw() {
   g.setCursor(6, y + 28);
   g.printf("clients %d", WiFi.softAPgetStationNum());
   g.setCursor(6, y + 42);
-  g.setTextColor(g_portalHits.empty() ? TFT_LIGHTGREY : TFT_GREEN, TFT_BLACK);
+  g.setTextColor(g_portalHits.empty() ? th.fg : th.ok, th.bg);
   g.printf("captures %u", (unsigned)g_portalHits.size());
   if (!g_portalHits.empty()) {
     g.setCursor(6, y + 56);
-    g.setTextColor(TFT_WHITE, TFT_BLACK);
+    g.setTextColor(th.fg, th.bg);
     g.print(g_portalHits.back().field1.substr(0, 30).c_str());
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A ssid  B(hold) back");
 }

@@ -5,6 +5,7 @@
 #include <esp_wifi.h>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -136,10 +137,11 @@ void WifiMonitorScreen::tick() {
 }
 
 void WifiMonitorScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   if (hop_)
@@ -147,7 +149,7 @@ void WifiMonitorScreen::draw() {
   else
     g.printf("WiFi Monitor  ch %d", ch_);
 
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   int y = kTitleH + 8;
   g.setCursor(6, y);
   g.printf("total  %lu", (unsigned long)g_total);
@@ -155,13 +157,13 @@ void WifiMonitorScreen::draw() {
   g.printf("mgmt %lu  data %lu  ctrl %lu", (unsigned long)g_mgmt,
            (unsigned long)g_data, (unsigned long)g_ctrl);
   g.setCursor(6, y + 28);
-  g.setTextColor(TFT_GREEN, TFT_BLACK);
+  g.setTextColor(th.ok, th.bg);
   g.printf("%lu frames/s", (unsigned long)rate_);
   g.setCursor(6, y + 42);
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.printf("last rssi  %d", g_last_rssi);
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A ch  A(hold) hop  B reset  B(hold) back");
 }

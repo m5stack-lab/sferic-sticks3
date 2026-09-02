@@ -9,6 +9,7 @@
 #include <cstdio>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -135,10 +136,11 @@ void WifiProbeScreen::tick() {
 }
 
 void WifiProbeScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Probes  %u uniq / %u  ch%d", (unsigned)entries_.size(),
@@ -157,7 +159,7 @@ void WifiProbeScreen::draw() {
   g.setTextSize(1);
   for (int i = 0; i < rows && (top_ + i) < (int)v.size(); ++i) {
     const Entry* e = v[top_ + i];
-    g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    g.setTextColor(th.fg, th.bg);
     g.setCursor(2, kTitleH + 3 + i * 11);
     g.printf("%02X%02X%02X%02X%02X%02X %-8s %d", e->mac[0], e->mac[1], e->mac[2],
              e->mac[3], e->mac[4], e->mac[5],
@@ -165,7 +167,7 @@ void WifiProbeScreen::draw() {
              e->rssi);
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A scroll  A(hold) clear  B(hold) back");
 }

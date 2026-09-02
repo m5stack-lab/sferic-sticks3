@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "hal.h"
+#include "theme.h"
 #include "pcap.h"
 
 namespace {
@@ -262,10 +263,11 @@ void wifiHandshakeStreamStop() {
 }
 
 void WifiHandshakeScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Handshake  ch%d  %uKB%s", ch_, (unsigned)(capture.used() / 1024),
@@ -278,14 +280,14 @@ void WifiHandshakeScreen::draw() {
   for (int i = 0; i < rows && (top_ + i) < (int)aps_.size(); ++i) {
     const Ap& ap = aps_[top_ + i];
     const bool hs = ap.eapol >= 2;
-    g.setTextColor(hs ? TFT_GREEN : ap.eapol ? TFT_YELLOW : TFT_LIGHTGREY,
-                   TFT_BLACK);
+    g.setTextColor(hs ? th.ok : ap.eapol ? th.warn : th.fg,
+                   th.bg);
     g.setCursor(2, kTitleH + 3 + i * kRowH);
     g.printf("%-11s e%u %s", ap.ssid.substr(0, 11).c_str(), ap.eapol,
              hs ? "HS" : "");
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A scroll  B export  B(hold) back");
 }

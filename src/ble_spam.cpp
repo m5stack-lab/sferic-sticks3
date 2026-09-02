@@ -5,6 +5,7 @@
 
 #include "ble_common.h"
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -108,20 +109,21 @@ void BleSpamScreen::tick() {
 }
 
 void BleSpamScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
   const char* v = verdict(rate_, churn_);
-  const uint16_t vc = (v[0] == 'S') ? TFT_RED : (v[0] == 'B') ? TFT_YELLOW
-                                                             : TFT_GREEN;
+  const uint16_t vc = (v[0] == 'S') ? th.bad : (v[0] == 'B') ? th.warn
+                                                             : th.ok;
 
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("BLE  Spam Detect");
 
   int y = kTitleH + 8;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y);
   g.printf("adv rate    %lu /s", (unsigned long)rate_);
   g.setCursor(6, y + 14);
@@ -130,12 +132,12 @@ void BleSpamScreen::draw() {
   g.printf("peak new    %lu /s", (unsigned long)peakChurn_);
 
   g.setTextSize(2);
-  g.setTextColor(vc, TFT_BLACK);
+  g.setTextColor(vc, th.bg);
   g.setCursor(6, y + 46);
   g.print(v);
 
   g.setTextSize(1);
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("B reset peak  B(hold) back");
 }

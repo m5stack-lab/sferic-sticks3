@@ -7,6 +7,7 @@
 #include <string>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr uint16_t kIrTxPin = 46;
@@ -151,50 +152,51 @@ void TvBGoneScreen::tick() {
 }
 
 void TvBGoneScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("Infrared  TV-B-Gone");
 
   g.setCursor(6, kTitleH + 14);
   if (arm_.armed && state_ != State::Firing) {
-    g.setTextColor(TFT_RED, TFT_BLACK);
+    g.setTextColor(th.bad, th.bg);
     g.print("ARMED");
     g.setCursor(6, kTitleH + 30);
-    g.setTextColor(TFT_WHITE, TFT_BLACK);
+    g.setTextColor(th.fg, th.bg);
     g.printf("B again -> fire %d codes", kCount);
-    g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+    g.setTextColor(th.fgDim, th.bg);
     g.setCursor(4, hal.h() - 9);
     g.print("B fire  A cancel  B(hold) back");
     return;
   }
   switch (state_) {
     case State::Idle:
-      g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       g.printf("%d codes ready.", kCount);
       g.setCursor(6, kTitleH + 30);
       g.print("Aim at the TV, press B.");
       break;
     case State::Firing:
-      g.setTextColor(TFT_YELLOW, TFT_BLACK);
+      g.setTextColor(th.warn, th.bg);
       g.printf("Sending %d/%d", idx_, kCount);
       g.setCursor(6, kTitleH + 30);
-      g.setTextColor(TFT_WHITE, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       if (idx_ > 0 && idx_ <= kCount) g.print(kCodes[idx_ - 1].name);
       break;
     case State::Done:
-      g.setTextColor(TFT_GREEN, TFT_BLACK);
+      g.setTextColor(th.ok, th.bg);
       g.printf("Done - %d codes sent", kCount);
       g.setCursor(6, kTitleH + 30);
-      g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       g.print("B again to repeat.");
       break;
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("B arm  B(hold) back");
 }

@@ -1,6 +1,7 @@
 #include "ui.h"
 
 #include "theme.h"
+#include "ui_kit.h"
 
 ScreenStack ui;
 
@@ -31,33 +32,9 @@ void ScreenStack::reset() {
   stack_.clear();
 }
 
-// ---------------- layout constants ----------------
-
 namespace {
-constexpr int kRowH = 16;
-constexpr int kTitleH = 18;
-int visibleRows() { return (hal.h() - kTitleH) / kRowH; }
-
-void drawTitle(const std::string& t) {
-  auto& g = hal.gfx();
-  const Theme& th = theme();
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print(t.c_str());
-}
-
-void drawHint(const char* s) {
-  auto& g = hal.gfx();
-  const Theme& th = theme();
-  const int y = hal.h() - 10;
-  g.fillRect(0, y, hal.w(), 10, th.bg);
-  g.setTextColor(th.fgDim, th.bg);
-  g.setTextSize(1);
-  g.setCursor(4, y);
-  g.print(s);
-}
+int visibleRows() { return kit::listRows(); }
+constexpr int kTitleH = kit::TITLE_H;
 }  // namespace
 
 // ---------------- MenuScreen ----------------
@@ -105,23 +82,16 @@ void MenuScreen::tick() {
 }
 
 void MenuScreen::draw() {
-  auto& g = hal.gfx();
-  const Theme& th = theme();
-  g.fillScreen(th.bg);
-  drawTitle(title_);
-
-  const int rows = visibleRows();
+  kit::begin(title_.c_str(), theme().fg);
+  const int rows = kit::listRows();
   for (int i = 0; i < rows && (top_ + i) < (int)items_.size(); ++i) {
     const int idx = top_ + i;
-    const int y = kTitleH + i * kRowH;
-    const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
-    g.setTextColor(onSel ? th.selFg : th.fg, onSel ? th.selBg : th.bg);
-    g.setTextSize(1);
-    g.setCursor(6, y + 4);
-    g.print(items_[idx].label.c_str());
+    const MenuItem& it = items_[idx];
+    const char* key = it.icon.empty() ? nullptr : it.icon.c_str();
+    kit::row(i, it.label.c_str(), idx == sel_, key,
+             key ? toolsetAccent(key) : 0);
   }
-  drawHint("A next  A(hold) prev  B select  B(hold) back");
+  kit::end("A next  A- prev  B open  B- back");
 }
 
 // ---------------- InfoScreen ----------------
@@ -155,14 +125,13 @@ void InfoScreen::tick() {
 void InfoScreen::draw() {
   auto& g = hal.gfx();
   const Theme& th = theme();
-  g.fillScreen(th.bg);
-  drawTitle(title_);
+  kit::begin(title_.c_str(), th.fg);
   const int rows = (hal.h() - kTitleH - 10) / 12;
   g.setTextColor(th.fg, th.bg);
   g.setTextSize(1);
   for (int i = 0; i < rows && (top_ + i) < (int)lines_.size(); ++i) {
-    g.setCursor(4, kTitleH + 4 + i * 12);
+    g.setCursor(6, kTitleH + 4 + i * 12);
     g.print(lines_[top_ + i].c_str());
   }
-  drawHint((int)lines_.size() > rows ? "A scroll   B back" : "B back");
+  kit::end((int)lines_.size() > rows ? "A scroll   B back" : "B back");
 }

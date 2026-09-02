@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr uint16_t kIrRxPin = 42;
@@ -199,10 +200,11 @@ void IrScreen::tick() {
 }
 
 void IrScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("Infrared  Learn / Replay");
@@ -211,28 +213,28 @@ void IrScreen::draw() {
   g.setCursor(6, kTitleH + 10);
   switch (mode_) {
     case Mode::Idle:
-      g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       g.print("Idle. Press A, then aim a");
       g.setCursor(6, kTitleH + 24);
       g.print("remote at the top edge.");
       break;
     case Mode::Listening:
-      g.setTextColor(TFT_YELLOW, TFT_BLACK);
+      g.setTextColor(th.warn, th.bg);
       g.print("Listening...");
       break;
     case Mode::Captured:
-      g.setTextColor(replayArm_.armed ? TFT_RED : TFT_GREEN, TFT_BLACK);
+      g.setTextColor(replayArm_.armed ? th.bad : th.ok, th.bg);
       g.print(replayArm_.armed ? "ARMED - B again to replay" : "Captured:");
       g.setCursor(6, kTitleH + 26);
-      g.setTextColor(TFT_WHITE, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       g.print(strike_.summary);
       g.setCursor(6, kTitleH + 42);
-      g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+      g.setTextColor(th.fg, th.bg);
       g.printf("%u raw samples", (unsigned)strike_.raw.size());
       break;
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print(mode_ != Mode::Captured  ? "A arm  B(hold) back"
           : replayArm_.armed       ? "B replay  A cancel  B(hold) back"

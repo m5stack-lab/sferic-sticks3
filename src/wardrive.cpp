@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -135,10 +136,11 @@ void WardriveScreen::tick() {
 }
 
 void WardriveScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Wardrive  %u aps  brg %.0f", (unsigned)log_.size(), bearing_);
@@ -147,14 +149,14 @@ void WardriveScreen::draw() {
   const int start = log_.size() > (size_t)rows ? log_.size() - rows : 0;
   for (int i = 0; start + i < (int)log_.size() && i < rows; ++i) {
     const Entry& e = log_[start + i];
-    g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    g.setTextColor(th.fg, th.bg);
     g.setCursor(2, kTitleH + 3 + i * kRowH);
     g.printf("%-13s %4d c%-2d %s",
              e.ssid.empty() ? "<hidden>" : e.ssid.substr(0, 13).c_str(),
              e.rssi, e.ch, encStr(e.enc));
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A(hold) zero-brg  B csv  B(hold) back");
 }

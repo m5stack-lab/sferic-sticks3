@@ -85,7 +85,7 @@ std::vector<MenuItem> buildToolset(const std::string& tsid) {
   for (const auto& t : registry.all()) {
     if (t.toolset != tsid || !registry.enabled(t.id)) continue;
     auto make = t.make;
-    items.push_back({t.name, [make] { ui.push(make()); }});
+    items.push_back({t.name, [make] { ui.push(make()); }, tsid});
   }
   if (items.empty()) items.push_back({"(all disabled)", [] {}});
   return items;
@@ -104,24 +104,28 @@ std::vector<MenuItem> buildRoot() {
 
     const std::string label = toolsetLabel(ts);
     const std::string tsid = ts;
-    root.push_back({label, [label, tsid] {
+    root.push_back({label,
+                    [label, tsid] {
                       ui.push(new MenuScreen(
                           label, [tsid] { return buildToolset(tsid); }));
-                    }});
+                    },
+                    tsid});
   }
-  root.push_back({"Settings", [] {
-                   ui.push(new MenuScreen(
-                       "Settings",
-                       std::vector<MenuItem>{
-                           {"Tools", [] { ui.push(new ToolsScreen()); }},
-                           {"Display", [] { ui.push(new DisplayScreen()); }},
-                           {"Capture", [] { ui.push(new CaptureScreen()); }},
-                           {"Web UI", [] { ui.push(new WebUiScreen()); }},
-                           {"About", [] {
-                              ui.push(new InfoScreen("About", aboutText()));
-                            }},
-                       }));
-                 }});
+  root.push_back({"Settings",
+                  [] {
+                    ui.push(new MenuScreen(
+                        "Settings",
+                        std::vector<MenuItem>{
+                            {"Tools", [] { ui.push(new ToolsScreen()); }, "gear"},
+                            {"Display", [] { ui.push(new DisplayScreen()); }, "gear"},
+                            {"Capture", [] { ui.push(new CaptureScreen()); }, "save"},
+                            {"Web UI", [] { ui.push(new WebUiScreen()); }, "globe"},
+                            {"About",
+                             [] { ui.push(new InfoScreen("About", aboutText())); },
+                             "info"},
+                        }));
+                  },
+                  "gear"});
   return root;
 }
 

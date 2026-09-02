@@ -1,6 +1,7 @@
 #include "usb_hid.h"
 
 #include "hal.h"
+#include "theme.h"
 
 #ifdef SFERIC_USB_HID
 
@@ -83,29 +84,30 @@ void UsbHidScreen::tick() {
 }
 
 void UsbHidScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print("USB  HID Keyboard");
 
   int y = kTitleH + 8;
-  g.setTextColor(typeArm_.armed ? TFT_RED : TFT_YELLOW, TFT_BLACK);
+  g.setTextColor(typeArm_.armed ? th.bad : th.warn, th.bg);
   g.setCursor(6, y);
   g.print(typeArm_.armed ? "ARMED - B again to type"
                         : "plug into a host, press B");
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, y + 18);
   g.printf("payload %d/%d:", payload_ + 1, kPayloadCount);
   g.setCursor(6, y + 32);
-  g.setTextColor(TFT_WHITE, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   std::string pv = kPayloads[payload_];
   if (!pv.empty() && pv.back() == '\n') pv.pop_back();
   g.print(pv.substr(0, 34).c_str());
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print(typeArm_.armed ? "B type  A cancel  B(hold) back"
                         : "A payload  B arm  B(hold) back");
@@ -123,9 +125,10 @@ void UsbHidScreen::tick() {
   }
 }
 void UsbHidScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.fillScreen(th.bg);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(6, 20);
   g.print("USB HID: flash the");
   g.setCursor(6, 34);

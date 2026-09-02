@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr uint16_t kRxPin = 42;
@@ -61,27 +62,28 @@ void IrDecodeScreen::tick() {
 }
 
 void IrDecodeScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   const bool recent = hal.nowMs() - lastHit_ < 400;
   g.print(recent ? "IR Decode  <<" : "IR Decode  listening");
 
   for (size_t i = 0; i < hist_.size(); ++i) {
-    g.setTextColor(i == 0 ? TFT_GREEN : TFT_LIGHTGREY, TFT_BLACK);
+    g.setTextColor(i == 0 ? th.ok : th.fg, th.bg);
     g.setCursor(4, kTitleH + 6 + (int)i * 13);
     g.print(hist_[i].c_str());
   }
   if (hist_.empty()) {
-    g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    g.setTextColor(th.fg, th.bg);
     g.setCursor(6, kTitleH + 16);
     g.print("Aim a remote at the top edge.");
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("B(hold) back");
 }

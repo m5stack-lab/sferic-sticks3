@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -126,6 +127,7 @@ void WifiDeauthScreen::tick() {
 }
 
 void WifiDeauthScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
   uint32_t peak = 0;
   for (const auto& ap : aps_)
@@ -133,19 +135,19 @@ void WifiDeauthScreen::draw() {
   const char* v = peak >= kAttackRate ? "ATTACK"
                   : totalD_ > 0        ? "deauth seen"
                                        : "clear";
-  const uint16_t vc = peak >= kAttackRate ? TFT_RED
-                      : totalD_ > 0       ? TFT_YELLOW
-                                          : TFT_GREEN;
+  const uint16_t vc = peak >= kAttackRate ? th.bad
+                      : totalD_ > 0       ? th.warn
+                                          : th.ok;
 
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Deauth  D%u Dis%u  ch%d", (unsigned)totalD_, (unsigned)totalDis_,
            ch_);
 
-  g.setTextColor(vc, TFT_BLACK);
+  g.setTextColor(vc, th.bg);
   g.setTextSize(2);
   g.setCursor(6, kTitleH + 4);
   g.print(v);
@@ -156,14 +158,14 @@ void WifiDeauthScreen::draw() {
   if (top_ < 0) top_ = 0;
   for (int i = 0; i < rows && (top_ + i) < (int)aps_.size(); ++i) {
     const Ap& ap = aps_[top_ + i];
-    g.setTextColor(ap.rate >= kAttackRate ? TFT_RED : TFT_LIGHTGREY, TFT_BLACK);
+    g.setTextColor(ap.rate >= kAttackRate ? th.bad : th.fg, th.bg);
     g.setCursor(2, kTitleH + 24 + i * kRowH);
     g.printf("%02X%02X%02X%02X%02X%02X d%u/s%u", ap.bssid[0], ap.bssid[1],
              ap.bssid[2], ap.bssid[3], ap.bssid[4], ap.bssid[5],
              (unsigned)ap.deauth, (unsigned)ap.rate);
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A scroll  A(hold) clear  B(hold) back");
 }

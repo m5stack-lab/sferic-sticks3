@@ -5,6 +5,7 @@
 #include <arduinoFFT.h>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -78,10 +79,11 @@ void MicSpectrumScreen::tick() {
 }
 
 void MicSpectrumScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillScreen(th.bg);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.printf("Mic Spectrum  %s", held_ ? "(hold)" : "");
@@ -98,14 +100,14 @@ void MicSpectrumScreen::draw() {
     int h = (int)(gh * (m / norm));
     if (h > gh) h = gh;
     if (h < 0) h = 0;
-    uint16_t c = h > gh * 2 / 3 ? TFT_RED : h > gh / 3 ? TFT_YELLOW : TFT_GREEN;
+    uint16_t c = h > gh * 2 / 3 ? th.bad : h > gh / 3 ? th.warn : th.ok;
     g.drawFastVLine(gx + x, gy + gh - h, h, c);
   }
 
-  g.setTextColor(TFT_WHITE, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setCursor(4, hal.h() - 18);
   g.printf("peak %.0f Hz", peakHz_);
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A hold  B(hold) back");
 }

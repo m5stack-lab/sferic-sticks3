@@ -4,6 +4,7 @@
 #include <WiFi.h>
 
 #include "hal.h"
+#include "theme.h"
 
 namespace {
 
@@ -25,9 +26,10 @@ const char* encTag(wifi_auth_mode_t m) {
 }
 
 uint16_t rssiColor(int rssi) {
-  if (rssi > -60) return TFT_GREEN;
-  if (rssi > -75) return TFT_YELLOW;
-  return TFT_RED;
+  const Theme& th = theme();
+  if (rssi > -60) return th.ok;
+  if (rssi > -75) return th.warn;
+  return th.bad;
 }
 
 int visibleRows() { return (hal.h() - kTitleH - 10) / kRowH; }
@@ -109,11 +111,12 @@ void WifiScanScreen::tick() {
 }
 
 void WifiScanScreen::draw() {
+  const Theme& th = theme();
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
+  g.fillScreen(th.bg);
 
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   switch (st_) {
@@ -138,11 +141,11 @@ void WifiScanScreen::draw() {
       const int idx = top_ + i;
       const int y = kTitleH + i * kRowH;
       const bool onSel = (idx == sel_);
-      if (onSel) g.fillRect(0, y, hal.w(), kRowH, TFT_NAVY);
+      if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
 
       const int rssi = WiFi.RSSI(idx);
-      g.setTextColor(onSel ? TFT_WHITE : rssiColor(rssi),
-                     onSel ? TFT_NAVY : TFT_BLACK);
+      g.setTextColor(onSel ? th.fg : rssiColor(rssi),
+                     onSel ? th.selBg : th.bg);
       g.setCursor(2, y + 2);
 
       String ssid = WiFi.SSID(idx);
@@ -153,7 +156,7 @@ void WifiScanScreen::draw() {
     }
   }
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.setTextColor(th.fgDim, th.bg);
   g.setCursor(4, hal.h() - 9);
   g.print("A next  A(hold)/B rescan  B(hold) back");
 }
