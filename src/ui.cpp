@@ -1,5 +1,7 @@
 #include "ui.h"
 
+#include "theme.h"
+
 ScreenStack ui;
 
 // ---------------- ScreenStack ----------------
@@ -38,8 +40,9 @@ int visibleRows() { return (hal.h() - kTitleH) / kRowH; }
 
 void drawTitle(const std::string& t) {
   auto& g = hal.gfx();
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  const Theme& th = theme();
+  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
+  g.setTextColor(th.fg, th.bgAlt);
   g.setTextSize(1);
   g.setCursor(4, 5);
   g.print(t.c_str());
@@ -47,9 +50,10 @@ void drawTitle(const std::string& t) {
 
 void drawHint(const char* s) {
   auto& g = hal.gfx();
+  const Theme& th = theme();
   const int y = hal.h() - 10;
-  g.fillRect(0, y, hal.w(), 10, TFT_BLACK);
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
+  g.fillRect(0, y, hal.w(), 10, th.bg);
+  g.setTextColor(th.fgDim, th.bg);
   g.setTextSize(1);
   g.setCursor(4, y);
   g.print(s);
@@ -102,7 +106,8 @@ void MenuScreen::tick() {
 
 void MenuScreen::draw() {
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
+  const Theme& th = theme();
+  g.fillScreen(th.bg);
   drawTitle(title_);
 
   const int rows = visibleRows();
@@ -110,9 +115,8 @@ void MenuScreen::draw() {
     const int idx = top_ + i;
     const int y = kTitleH + i * kRowH;
     const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, TFT_NAVY);
-    g.setTextColor(onSel ? TFT_WHITE : TFT_LIGHTGREY,
-                   onSel ? TFT_NAVY : TFT_BLACK);
+    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
+    g.setTextColor(onSel ? th.selFg : th.fg, onSel ? th.selBg : th.bg);
     g.setTextSize(1);
     g.setCursor(6, y + 4);
     g.print(items_[idx].label.c_str());
@@ -150,10 +154,11 @@ void InfoScreen::tick() {
 
 void InfoScreen::draw() {
   auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
+  const Theme& th = theme();
+  g.fillScreen(th.bg);
   drawTitle(title_);
   const int rows = (hal.h() - kTitleH - 10) / 12;
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  g.setTextColor(th.fg, th.bg);
   g.setTextSize(1);
   for (int i = 0; i < rows && (top_ + i) < (int)lines_.size(); ++i) {
     g.setCursor(4, kTitleH + 4 + i * 12);

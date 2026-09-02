@@ -6,10 +6,12 @@
 #include "registry.h"
 #include "serial_control.h"
 #include "stream.h"
+#include "theme.h"
 #include "ui.h"
 
 void setup() {
   hal.begin();
+  loadThemePref();
 #if ARDUINO_USB_MODE == 1
   Serial.setTxBufferSize(4096);  // HWCDC only — headless replies are multi-KB
 #endif
