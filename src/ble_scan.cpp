@@ -9,6 +9,7 @@
 #include "ble_gatt.h"
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -55,17 +56,13 @@ void BleScanScreen::tick() {
     pop();
     return;
   }
-  if (a == BtnEvent::Hold) {
-    if (scan_) scan_->clearResults();
-    sel_ = 0;
-    top_ = 0;
+  const int n = scan_ ? scan_->getResults().getCount() : 0;
+  if (a == BtnEvent::Click && n > 0) {
+    sel_ = (sel_ + 1) % n;
     dirty_ = true;
-  } else if (a == BtnEvent::Click && scan_) {
-    const int n = scan_->getResults().getCount();
-    if (n > 0) {
-      sel_ = (sel_ + 1) % n;
-      dirty_ = true;
-    }
+  } else if (a == BtnEvent::Hold && n > 0) {
+    sel_ = (sel_ - 1 + n) % n;
+    dirty_ = true;
   } else if (b == BtnEvent::Click && scan_) {
     NimBLEScanResults r = scan_->getResults();
     if (sel_ < r.getCount()) {
@@ -88,6 +85,7 @@ void BleScanScreen::tick() {
   }
 
   if (hal.nowMs() - lastDraw_ > 400) dirty_ = true;  // refresh RSSI / new devs
+  if (kit::marqueeAnimating()) dirty_ = true;
 
   if (scan_ && hal.nowMs() - lastLog_ > 2000) {
     lastLog_ = hal.nowMs();
@@ -102,51 +100,30 @@ void BleScanScreen::tick() {
 }
 
 void BleScanScreen::draw() {
-  const Theme& th = theme();
-  auto& g = hal.gfx();
   NimBLEScanResults r = scan_ ? scan_->getResults() : NimBLEScanResults();
   const int n = r.getCount();
+  const bool scanning = scan_ && scan_->isScanning();
 
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("BLE  %d dev%s", n,
-           (scan_ && scan_->isScanning()) ? "  scanning" : "");
+  kit::begin(scanning ? "BLE Scan  scanning" : "BLE Scan", toolsetAccent("ble"));
 
-  const int rows = visibleRows();
-  if (n == 0) sel_ = 0;
-  else if (sel_ >= n) sel_ = n - 1;
-  if (sel_ < top_) top_ = sel_;
-  if (sel_ >= top_ + rows) top_ = sel_ - rows + 1;
-
-  for (int i = 0; i < rows && (top_ + i) < n; ++i) {
-    const int idx = top_ + i;
-    const int y = kTitleH + i * kRowH;
-    const NimBLEAdvertisedDevice* d = r.getDevice(idx);
-    if (d == nullptr) continue;
-    const bool onSel = (idx == sel_);
-    if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
-
-    const int rssi = d->getRSSI();
-    g.setTextColor(onSel ? th.fg : rssiColor(rssi),
-                   onSel ? th.selBg : th.bg);
-    g.setCursor(2, y + 2);
-
-    std::string nm = d->haveName() ? d->getName() : std::string("<no name>");
-    if (nm.size() > 14) nm = nm.substr(0, 14);
-    std::string addr = d->getAddress().toString();
-    std::string tail =
-        addr.size() >= 5 ? addr.substr(addr.size() - 5) : addr;
-
-    g.printf("%-14s%4d %s s%u", nm.c_str(), rssi, tail.c_str(),
-             d->getServiceUUIDCount());
+  if (n == 0) {
+    kit::headline("...", theme().fgDim);
+    kit::end("B- back");
+    return;
+  }
+  if (sel_ >= n) sel_ = n - 1;
+  const NimBLEAdvertisedDevice* d = r.getDevice(sel_);
+  if (d == nullptr) {
+    kit::end("B- back");
+    return;
   }
 
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A next  A(hold) rescan  B open  B(hold) back");
+  std::string nm = d->haveName() ? d->getName() : d->getAddress().toString();
+  char sub[56];
+  std::snprintf(sub, sizeof(sub), "%d dBm  s%u  %s", d->getRSSI(),
+                d->getServiceUUIDCount(), d->isConnectable() ? "conn" : "");
+  kit::detail(nm.c_str(), sub, sel_ + 1, n);
+  kit::end("< >   B decode   B- back");
 }
 
 // ---------------- headless ----------------

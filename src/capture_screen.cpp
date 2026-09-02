@@ -2,6 +2,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 #include "pcap.h"
 
 namespace {

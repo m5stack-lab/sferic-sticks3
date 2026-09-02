@@ -5,6 +5,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -55,43 +56,25 @@ void MotionScreen::tick() {
 
 void MotionScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
   const uint32_t now = hal.nowMs();
   const bool moving = (now - lastTrig_) < 700 && events_ > 0;
 
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("Motion / Tamper  [%s]", kName[sens_]);
+  char t[40];
+  std::snprintf(t, sizeof(t), "Motion / Tamper  [%s]", kName[sens_]);
+  kit::begin(t, toolsetAccent("sensors"));
+  kit::headline(moving ? "MOTION" : "QUIET", moving ? th.bad : th.ok);
 
-  int y = kTitleH + 8;
-  g.setTextColor(th.fg, th.bg);
-  g.setCursor(6, y);
-  g.printf("accel dev  %.3f g", accelDev_);
-  g.setCursor(6, y + 14);
-  g.printf("gyro       %.0f deg/s", gyroMag_);
-
-  g.setTextSize(2);
-  g.setCursor(6, y + 34);
-  if (moving) {
-    g.setTextColor(th.bad, th.bg);
-    g.print("MOTION");
-  } else {
-    g.setTextColor(th.ok, th.bg);
-    g.print("QUIET");
-  }
-  g.setTextSize(1);
-  g.setTextColor(th.fg, th.bg);
-  g.setCursor(6, y + 58);
+  char l[40];
+  std::snprintf(l, sizeof(l), "dev  %.3f g", accelDev_);
+  kit::line(0, l);
+  std::snprintf(l, sizeof(l), "gyro %.0f d/s", gyroMag_);
+  kit::line(1, l);
   if (events_ > 0)
-    g.printf("events %lu   last %lus ago", (unsigned long)events_,
-             (unsigned long)((now - lastTrig_) / 1000));
+    std::snprintf(l, sizeof(l), "events %lu  %lus", (unsigned long)events_,
+                  (unsigned long)((now - lastTrig_) / 1000));
   else
-    g.print("events 0");
+    std::snprintf(l, sizeof(l), "events 0");
+  kit::line(2, l, th.fgDim);
 
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A sens  B reset  B(hold) back");
+  kit::end("A sens   B reset   B- back");
 }

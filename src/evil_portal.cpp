@@ -7,6 +7,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 std::vector<PortalHit> g_portalHits;
 

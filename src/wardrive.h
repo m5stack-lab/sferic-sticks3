@@ -35,6 +35,7 @@ class WardriveScreen : public Screen {
     uint32_t ms;
   };
   std::vector<Entry> log_;
+  int sel_ = 0;
   float bearing_ = 0;
   uint32_t lastImu_ = 0;
   bool scanning_ = false;

@@ -5,6 +5,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 
@@ -66,14 +67,18 @@ void WifiScanScreen::tick() {
     pop();
     return;
   }
-  if (a == BtnEvent::Hold) {
+  if (b == BtnEvent::Click && st_ != State::Scanning) {
     startScan();
-  } else if (b == BtnEvent::Click && st_ != State::Scanning) {
-    startScan();
-  } else if (a == BtnEvent::Click && st_ == State::Done && count_ > 0) {
-    sel_ = (sel_ + 1) % count_;
-    dirty_ = true;
+  } else if (st_ == State::Done && count_ > 0) {
+    if (a == BtnEvent::Click) {
+      sel_ = (sel_ + 1) % count_;
+      dirty_ = true;
+    } else if (a == BtnEvent::Hold) {
+      sel_ = (sel_ - 1 + count_) % count_;
+      dirty_ = true;
+    }
   }
+  if (kit::marqueeAnimating()) dirty_ = true;
 
   if (st_ == State::Scanning) {
     const int r = WiFi.scanComplete();
@@ -94,16 +99,6 @@ void WifiScanScreen::tick() {
     }
   }
 
-  const int rows = visibleRows();
-  if (sel_ < top_) {
-    top_ = sel_;
-    dirty_ = true;
-  }
-  if (sel_ >= top_ + rows) {
-    top_ = sel_ - rows + 1;
-    dirty_ = true;
-  }
-
   if (dirty_) {
     draw();
     dirty_ = false;
@@ -111,54 +106,26 @@ void WifiScanScreen::tick() {
 }
 
 void WifiScanScreen::draw() {
-  const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
+  const char* title = st_ == State::Scanning ? "AP Scan  scanning..."
+                      : st_ == State::Failed ? "AP Scan  failed"
+                                             : "AP Scan";
+  kit::begin(title, toolsetAccent("wifi"));
 
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  switch (st_) {
-    case State::Scanning: {
-      const char dots[] = {'.', ' ', ' '};
-      const int n = (hal.nowMs() / 250) % 3;
-      g.printf("WiFi  scanning%c%c%c", dots[(0 + 3 - n) % 3],
-               dots[(1 + 3 - n) % 3], dots[(2 + 3 - n) % 3]);
-      break;
-    }
-    case State::Failed:
-      g.print("WiFi  scan failed");
-      break;
-    default:
-      g.printf("WiFi  %d APs", count_);
-      break;
+  if (st_ != State::Done || count_ == 0) {
+    kit::headline(st_ == State::Scanning ? "..." : "0", theme().fgDim);
+    kit::end("B rescan   B- back");
+    return;
   }
+  if (sel_ >= count_) sel_ = 0;
 
-  if (st_ == State::Done) {
-    const int rows = visibleRows();
-    for (int i = 0; i < rows && (top_ + i) < count_; ++i) {
-      const int idx = top_ + i;
-      const int y = kTitleH + i * kRowH;
-      const bool onSel = (idx == sel_);
-      if (onSel) g.fillRect(0, y, hal.w(), kRowH, th.selBg);
-
-      const int rssi = WiFi.RSSI(idx);
-      g.setTextColor(onSel ? th.fg : rssiColor(rssi),
-                     onSel ? th.selBg : th.bg);
-      g.setCursor(2, y + 2);
-
-      String ssid = WiFi.SSID(idx);
-      if (ssid.isEmpty()) ssid = "<hidden>";
-      if (ssid.length() > 15) ssid = ssid.substring(0, 15);
-      g.printf("%-15s%4d c%-2d %s", ssid.c_str(), rssi, WiFi.channel(idx),
-               encTag(WiFi.encryptionType(idx)));
-    }
-  }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A next  A(hold)/B rescan  B(hold) back");
+  String ssid = WiFi.SSID(sel_);
+  if (ssid.isEmpty()) ssid = "<hidden>";
+  const int rssi = WiFi.RSSI(sel_);
+  char sub[48];
+  std::snprintf(sub, sizeof(sub), "%d dBm  ch%d  %s", rssi, WiFi.channel(sel_),
+                encTag(WiFi.encryptionType(sel_)));
+  kit::detail(ssid.c_str(), sub, sel_ + 1, count_);
+  kit::end("< >  B rescan   B- back");
 }
 
 // ---------------- headless ----------------

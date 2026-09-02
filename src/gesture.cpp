@@ -5,6 +5,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -61,30 +62,16 @@ void GestureScreen::tick() {
 
 void GestureScreen::draw() {
   const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("Sensors  Gesture");
+  kit::begin("Sensors  Gesture", toolsetAccent("sensors"));
+  kit::headline(orient_, th.accentSensors);
 
-  int y = kTitleH + 6;
-  g.setTextSize(2);
-  g.setTextColor(th.accentBle, th.bg);
-  g.setCursor(6, y);
-  g.print(orient_);
+  char l[48];
+  std::snprintf(l, sizeof(l), "a %+.2f %+.2f", ax_, ay_);
+  kit::line(0, l);
+  std::snprintf(l, sizeof(l), "gyro %.0f d/s", gmag_);
+  kit::line(1, l);
+  std::snprintf(l, sizeof(l), "shakes %lu %s", (unsigned long)shakes_, gesture_);
+  kit::line(2, l, th.fgDim);
 
-  g.setTextSize(1);
-  g.setTextColor(th.fg, th.bg);
-  g.setCursor(6, y + 24);
-  g.printf("a %+.2f %+.2f %+.2f", ax_, ay_, az_);
-  g.setCursor(6, y + 38);
-  g.printf("gyro %.0f deg/s", gmag_);
-  g.setCursor(6, y + 52);
-  g.printf("shakes %lu   last: %s", (unsigned long)shakes_, gesture_);
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A reset  B(hold) back");
+  kit::end("A reset   B- back");
 }

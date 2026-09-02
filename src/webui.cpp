@@ -5,6 +5,8 @@
 #include <WiFi.h>
 
 #include "hal.h"
+#include "theme.h"
+#include "ui_kit.h"
 #include "pcap.h"
 #include "registry.h"
 #include "webui_html.h"
@@ -188,29 +190,17 @@ void WebUiScreen::tick() {
 }
 
 void WebUiScreen::draw() {
-  auto& g = hal.gfx();
-  g.fillScreen(TFT_BLACK);
-  g.fillRect(0, 0, hal.w(), kTitleH, TFT_DARKGREY);
-  g.setTextColor(TFT_WHITE, TFT_DARKGREY);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.print("Settings  Web UI");
+  const Theme& th = theme();
+  kit::begin("Web UI", toolsetAccent("wifi"));
+  kit::headline("AP UP", th.ok);
 
-  int y = kTitleH + 10;
-  g.setTextColor(TFT_GREEN, TFT_BLACK);
-  g.setCursor(6, y);
-  g.printf("AP  %s", kSsid);
-  g.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-  g.setCursor(6, y + 16);
-  g.printf("http://%s/", WiFi.softAPIP().toString().c_str());
-  g.setCursor(6, y + 32);
-  g.printf("clients %d   reqs %u", WiFi.softAPgetStationNum(),
-           (unsigned)g_reqs);
-  g.setCursor(6, y + 48);
-  g.setTextColor(TFT_YELLOW, TFT_BLACK);
-  g.print("WiFi tools paused while up");
+  char l[48];
+  std::snprintf(l, sizeof(l), "%s", WiFi.softAPIP().toString().c_str());
+  kit::line(0, l);
+  std::snprintf(l, sizeof(l), "clients %d", WiFi.softAPgetStationNum());
+  kit::line(1, l);
+  std::snprintf(l, sizeof(l), "reqs %u", (unsigned)g_reqs);
+  kit::line(2, l, th.fgDim);
 
-  g.setTextColor(TFT_DARKGREY, TFT_BLACK);
-  g.setCursor(4, hal.h() - 9);
-  g.print("B(hold) stop + back");
+  kit::end("B- stop + back");
 }

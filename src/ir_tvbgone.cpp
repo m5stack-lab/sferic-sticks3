@@ -8,6 +8,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr uint16_t kIrTxPin = 46;

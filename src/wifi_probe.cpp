@@ -10,6 +10,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr int kTitleH = 18;

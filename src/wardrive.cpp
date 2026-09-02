@@ -11,6 +11,7 @@
 
 #include "hal.h"
 #include "theme.h"
+#include "ui_kit.h"
 
 namespace {
 constexpr int kTitleH = 18;
@@ -73,10 +74,14 @@ void WardriveScreen::tick() {
   if (b == BtnEvent::Click) {
     Serial.printf("[wardrive] export %u aps\n", (unsigned)log_.size());
     exportCsv();
-  } else if (a == BtnEvent::Hold) {
-    bearing_ = 0;
+  } else if (a == BtnEvent::Click && !log_.empty()) {
+    sel_ = (sel_ + 1) % (int)log_.size();
+    dirty_ = true;
+  } else if (a == BtnEvent::Hold && !log_.empty()) {
+    sel_ = (sel_ - 1 + (int)log_.size()) % (int)log_.size();
     dirty_ = true;
   }
+  if (kit::marqueeAnimating()) dirty_ = true;
 
   // integrate gyro yaw
   const uint32_t now = hal.nowMs();
@@ -136,29 +141,23 @@ void WardriveScreen::tick() {
 }
 
 void WardriveScreen::draw() {
-  const Theme& th = theme();
-  auto& g = hal.gfx();
-  g.fillScreen(th.bg);
-  g.fillRect(0, 0, hal.w(), kTitleH, th.bgAlt);
-  g.setTextColor(th.fg, th.bgAlt);
-  g.setTextSize(1);
-  g.setCursor(4, 5);
-  g.printf("Wardrive  %u aps  brg %.0f", (unsigned)log_.size(), bearing_);
+  char t[40];
+  std::snprintf(t, sizeof(t), "Wardrive  brg %.0f", bearing_);
+  kit::begin(t, toolsetAccent("wifi"));
 
-  const int rows = (hal.h() - kTitleH - 10) / kRowH;
-  const int start = log_.size() > (size_t)rows ? log_.size() - rows : 0;
-  for (int i = 0; start + i < (int)log_.size() && i < rows; ++i) {
-    const Entry& e = log_[start + i];
-    g.setTextColor(th.fg, th.bg);
-    g.setCursor(2, kTitleH + 3 + i * kRowH);
-    g.printf("%-13s %4d c%-2d %s",
-             e.ssid.empty() ? "<hidden>" : e.ssid.substr(0, 13).c_str(),
-             e.rssi, e.ch, encStr(e.enc));
+  if (log_.empty()) {
+    kit::headline("0 aps", theme().fgDim);
+    kit::end("B csv   B- back");
+    return;
   }
-
-  g.setTextColor(th.fgDim, th.bg);
-  g.setCursor(4, hal.h() - 9);
-  g.print("A(hold) zero-brg  B csv  B(hold) back");
+  if (sel_ >= (int)log_.size()) sel_ = 0;
+  const Entry& e = log_[sel_];
+  char sub[56];
+  std::snprintf(sub, sizeof(sub), "%d dBm  ch%d  %s  b%.0f", e.rssi, e.ch,
+                encStr(e.enc), e.bearing);
+  kit::detail(e.ssid.empty() ? "<hidden>" : e.ssid.c_str(), sub, sel_ + 1,
+              (int)log_.size());
+  kit::end("< >   B csv   B- back");
 }
 
 // ---------------- headless streaming ----------------
