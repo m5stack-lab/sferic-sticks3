@@ -8,6 +8,9 @@
 #include "stream.h"
 #include "theme.h"
 #include "ui.h"
+#ifdef SFERIC_RF_PACK
+#include "rf_pack.h"
+#endif
 
 void setup() {
   hal.begin();
@@ -17,6 +20,9 @@ void setup() {
 #endif
   Serial.begin(115200);
   registry.begin();        // load per-tool enabled state from NVS
+#ifdef SFERIC_RF_PACK
+  rfpack::begin();  // shared SPI bus + probe CC1101 / nRF24 (ADR-0012)
+#endif
   registerBuiltinTools();  // ADR-0004
   stream::registerTools();  // headless streaming sessions
   emit::registerTools();    // headless emitters (arm/fire)

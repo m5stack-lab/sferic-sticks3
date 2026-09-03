@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [sferic, sferic-usbhid]
+        env: [sferic, sferic-usbhid, sferic-rfpack]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,6 +68,7 @@ jobs:
           mkdir -p out
           cp dist/sferic-firmware/firmware.bin        "out/sferic-${{ github.ref_name }}.bin"
           cp dist/sferic-usbhid-firmware/firmware.bin  "out/sferic-usbhid-${{ github.ref_name }}.bin"
+          cp dist/sferic-rfpack-firmware/firmware.bin  "out/sferic-rfpack-${{ github.ref_name }}.bin"
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*.bin

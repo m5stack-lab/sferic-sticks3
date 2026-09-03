@@ -27,6 +27,10 @@
 #include "wifi_deauth.h"
 #include "wifi_handshake.h"
 #include "motion.h"
+#ifdef SFERIC_RF_PACK
+#include "nrf24.h"
+#include "subghz.h"
+#endif
 #include "registry.h"
 #include "tools_screen.h"
 #include "wifi_monitor.h"
@@ -200,6 +204,16 @@ void registerBuiltinTools() {
   registry.add({"usb.hid", "HID Keyboard", "usb",
                 "USB keystroke injection (ADR-0005 build)",
                 [] { return static_cast<Screen*>(new UsbHidScreen()); }});
+#endif
+#ifdef SFERIC_RF_PACK
+  registry.add({"subghz.scan", "Band Scan", "subghz",
+                "433 MHz occupancy sweep (CC1101 RSSI)",
+                [] { return static_cast<Screen*>(new SubGhzScanScreen()); },
+                [](const std::string& p) { return subghzScanJson(p); }});
+  registry.add({"nrf24.scan", "Band Scan", "nrf24",
+                "2.4 GHz carrier-detect sweep (nRF24 RPD)",
+                [] { return static_cast<Screen*>(new Nrf24ScanScreen()); },
+                [](const std::string& p) { return nrf24ScanJson(p); }});
 #endif
 }
 

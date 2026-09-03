@@ -29,6 +29,13 @@ flashing less reliable — hold the side button while connecting to force the
 bootloader. The default `sferic` build keeps the rock-solid
 USB-Serial/JTAG.
 
+**`sferic-rfpack`** adds the `subghz` (CC1101) + `nrf24` (nRF24L01+) toolsets
+for the pingequa RF Pack S3 backpack
+([ADR-0012](docs/adr/0012-rf-pack-spi-arbitration.md),
+[pin map](docs/hardware/rf-pack-s3.md)). Drivers are scaffolded from the
+datasheets and unverified — the build boots and reports "RF Pack not
+detected" with no board attached. Same USB mode as `sferic`.
+
 ## Controls
 
 Two buttons: **A** = next / (hold) prev · **B** = select / (hold) back.
@@ -46,6 +53,7 @@ Tools that emit IR / RF / keystrokes (TV-B-Gone, IR Replay, BLE/USB HID) are
 | **Infrared** | Learn / Replay · TV-B-Gone (~39 codes) · Protocol Decode |
 | **Sensors** | Motion / Tamper · Mic Spectrum · Gesture |
 | **USB** *(sferic-usbhid only)* | HID Keyboard |
+| **SubGHz / 2.4GHz** *(sferic-rfpack only)* | Band Scan ×2 — scaffolded, RF Pack S3 not yet verified |
 | **Settings** | Tools (enable/disable, persisted) · Display (sleep timeout + brightness) · Capture (pcap buffer) · Web UI · About |
 
 Each tool is a `registry.add({...})` line in `src/menu_tree.cpp` plus a
