@@ -114,6 +114,20 @@ BtnEvent Hal::event(Btn b) {
 
 bool Hal::held(Btn b) const { return (b == Btn::A) ? a_.down : b_.down; }
 
+Nav Hal::nav() {
+  // StickS3 derivation (ADR-0013 §3): consume the Btn events so a screen
+  // that calls nav() doesn't also see them via event().
+  const BtnEvent a = event(Btn::A);
+  const BtnEvent b = event(Btn::B);
+  if (a == BtnEvent::Click) return Nav::Next;
+  if (a == BtnEvent::Hold) return Nav::Prev;
+  if (b == BtnEvent::Click) return Nav::Select;
+  if (b == BtnEvent::Hold) return Nav::Back;
+  return Nav::None;
+}
+
+KeyEvent Hal::key() { return {}; }  // no keyboard on the StickS3
+
 void Hal::poke() {
   lastAct_ = millis();
   if (!awake_) {

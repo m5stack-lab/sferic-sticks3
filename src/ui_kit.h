@@ -2,13 +2,16 @@
 
 #include <cstdint>
 
+#include "board_profile.h"
+
 // Shared immediate-mode drawing grammar (ADR-0011 §2). Every Screen composes
 // from these; none calls gfx() with a literal colour or hand-rolls the title
-// / hint bars again. Metrics target the 240x135 panel.
+// / hint bars again. Metrics come from board_profile.h (ADR-0013 §4) — a
+// different panel is a different board_profile.h, not a change here.
 namespace kit {
 
-constexpr int W = 240;
-constexpr int H = 135;
+constexpr int W = board::SCREEN_W;
+constexpr int H = board::SCREEN_H;
 constexpr int STATUS_H = 18;  // persistent status strip (menus)
 constexpr int TITLE_H = 20;   // per-screen title bar (tool detail screens)
 constexpr int HINT_H = 12;

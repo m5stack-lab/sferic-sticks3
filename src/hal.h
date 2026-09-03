@@ -4,9 +4,15 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "board_profile.h"
+
 // Thin hardware layer over M5Unified. Tools and the UI talk to this, not to
 // M5.* directly, so the M5 dependency stays in one place.
 
+// The board's "action inputs". On the StickS3 these are the two physical
+// buttons; a board without buttons (Tab5) synthesizes them from a bottom
+// touch bar / keyboard keys. Tools read these directly for their own
+// per-tool verbs; the menu/screen navigation reads hal.nav() instead.
 enum class Btn : uint8_t { A, B };
 
 // A consumed-once input event for the current frame.
@@ -14,6 +20,22 @@ enum class BtnEvent : uint8_t {
   None,
   Click,  // short press released
   Hold,   // held past the long-press threshold (fires once)
+};
+
+// Abstract navigation intent (ADR-0013 §3) — what every menu / list / detail
+// screen consumes so the same UI code works on buttons, touch swipes, and
+// keyboard arrows. Consumed once per frame; consumes the underlying Btn
+// events on the StickS3.
+enum class Nav : uint8_t { None, Prev, Next, Select, Back };
+
+// A keyboard key event (ADR-0013 §3). Empty on boards without a keyboard.
+struct KeyEvent {
+  uint16_t code = 0;  // named key (arrows / Enter / Esc / Tab / Fn); 0 if none
+  char ch = 0;        // printable character; 0 if none
+  bool ctrl = false;
+  bool shift = false;
+  bool alt = false;
+  explicit operator bool() const { return code != 0 || ch != 0; }
 };
 
 class Hal {
@@ -25,6 +47,16 @@ class Hal {
   BtnEvent event(Btn b);  // returns and clears this frame's event for b
   bool held(Btn b) const;
   void injectNav(Btn b, BtnEvent e);  // desk-test nav from the serial channel
+
+  // Abstract navigation for menu / list / detail screens (ADR-0013 §3).
+  // Consumes this frame's Btn events: A=Next, A-hold=Prev, B=Select,
+  // B-hold=Back. A touch/keyboard board overrides the derivation, same enum.
+  Nav nav();
+
+  // This frame's keyboard event, or an empty KeyEvent. Always empty on a
+  // board without a keyboard (board::HAS_KEYBOARD == false).
+  KeyEvent key();
+  bool hasKeyboard() const { return board::HAS_KEYBOARD; }
 
   // --- display ---
   M5GFX& gfx() { return M5.Display; }

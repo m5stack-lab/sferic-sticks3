@@ -55,21 +55,31 @@ void MenuScreen::onEnter() {
 
 void MenuScreen::tick() {
   if (hal.wokeThisFrame()) dirty_ = true;  // repaint after screen sleep
-  const BtnEvent a = hal.event(Btn::A);
-  const BtnEvent b = hal.event(Btn::B);
 
-  if (a == BtnEvent::Click && !items_.empty()) {
-    sel_ = (sel_ + 1) % (int)items_.size();
-    dirty_ = true;
-  } else if (a == BtnEvent::Hold && !items_.empty()) {
-    sel_ = (sel_ - 1 + (int)items_.size()) % (int)items_.size();
-    dirty_ = true;
-  } else if (b == BtnEvent::Click && !items_.empty()) {
-    items_[sel_].action();  // may push a screen
-    return;
-  } else if (b == BtnEvent::Hold) {
-    pop();
-    return;
+  switch (hal.nav()) {
+    case Nav::Next:
+      if (!items_.empty()) {
+        sel_ = (sel_ + 1) % (int)items_.size();
+        dirty_ = true;
+      }
+      break;
+    case Nav::Prev:
+      if (!items_.empty()) {
+        sel_ = (sel_ - 1 + (int)items_.size()) % (int)items_.size();
+        dirty_ = true;
+      }
+      break;
+    case Nav::Select:
+      if (!items_.empty()) {
+        items_[sel_].action();  // may push a screen
+        return;
+      }
+      break;
+    case Nav::Back:
+      pop();
+      return;
+    case Nav::None:
+      break;
   }
 
   if (dirty_) { draw(); dirty_ = false; }
@@ -101,16 +111,22 @@ InfoScreen::InfoScreen(std::string title, std::string body)
 
 void InfoScreen::tick() {
   if (hal.wokeThisFrame()) dirty_ = true;  // repaint after screen sleep
-  const BtnEvent a = hal.event(Btn::A);
-  const BtnEvent b = hal.event(Btn::B);
   const int rows = (hal.h() - kTitleH - 10) / 12;
 
-  if (a == BtnEvent::Click) {
-    if (top_ + rows < (int)lines_.size()) { top_++; dirty_ = true; }
-    else { top_ = 0; dirty_ = true; }
-  } else if (b == BtnEvent::Click || b == BtnEvent::Hold) {
-    pop();
-    return;
+  switch (hal.nav()) {
+    case Nav::Next:  // scroll down, wrapping at the end
+      top_ = (top_ + rows < (int)lines_.size()) ? top_ + 1 : 0;
+      dirty_ = true;
+      break;
+    case Nav::Prev:  // scroll up
+      if (top_ > 0) { top_--; dirty_ = true; }
+      break;
+    case Nav::Select:
+    case Nav::Back:
+      pop();
+      return;
+    case Nav::None:
+      break;
   }
   if (dirty_) { draw(); dirty_ = false; }
 }
