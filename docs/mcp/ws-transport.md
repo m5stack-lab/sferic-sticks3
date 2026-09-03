@@ -64,13 +64,14 @@ collector normalizes to wall-clock on ingest and keeps the original in
 
 ```jsonc
 { "type":"hello", "token":"<per-station bearer>",
-  "station":{ "id":"stick-6e27ac", "model":"m5stack-sticks3",
-              "fw_version":"0.1.0 v0.1.0-…",
+  "station":{ "id":"stick-6e27ac", "mac":"ac:27:6e:d2:5d:0c",
+              "model":"m5stack-sticks3", "fw_version":"0.1.0 v0.1.0-…",
               "toolsets":["wifi","ble","ir","sensors"],
               "radios":["wifi-2g4","ble","ir-tx","ir-rx"] } }
 ```
 
-Same `station` block as the serial `hello` reply (`dispatch::stationInfo`).
+Same `station` block as the serial `hello` reply (`dispatch::stationInfo`);
+`mac` is the Wi-Fi STA MAC, also logged on boot as `[ws] sta mac …`.
 
 ### `welcome`
 

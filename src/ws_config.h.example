@@ -5,6 +5,9 @@
 // Wi-Fi creds. ADR-0009 §6: the token is provisioned out of band.
 
 #define WS_WIFI_SSID "your-ssid"
+// Empty string = open network (no passphrase). The station's Wi-Fi STA MAC
+// is logged on boot ("[ws] sta mac …") and is in the `hello` frame — add it
+// to the AP's MAC allowlist if the network gates by MAC.
 #define WS_WIFI_PASS "your-passphrase"
 
 // The collector's reachable address (its tailnet IP per ADR-0008), the WS

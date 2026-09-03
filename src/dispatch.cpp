@@ -215,6 +215,7 @@ void opEmitStatus(Link& link, long id) {
 
 void dispatch::stationInfo(JsonObject s) {
   s["id"] = hal.stationId();
+  s["mac"] = hal.macAddress();
   s["model"] = "m5stack-sticks3";
   s["fw_version"] = SFERIC_VERSION " " SFERIC_BUILD;
   JsonArray ts = s["toolsets"].to<JsonArray>();

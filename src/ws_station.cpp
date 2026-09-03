@@ -9,6 +9,7 @@
 
 #include "dispatch.h"
 #include "emit.h"
+#include "hal.h"
 #include "link.h"
 #include "stream_hub.h"
 
@@ -111,9 +112,15 @@ void onWsEvent(WStype_t type, uint8_t* payload, size_t length) {
 void WsStation::begin() {
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
-  WiFi.begin(WS_WIFI_SSID, WS_WIFI_PASS);
-  Serial.printf("[ws] joining %s, collector %s:%d%s\n", WS_WIFI_SSID,
-                WS_COLLECTOR_HOST, (int)WS_COLLECTOR_PORT, WS_COLLECTOR_PATH);
+  // An empty WS_WIFI_PASS means an open network (this deployment's AP has no
+  // passphrase and gates by MAC allowlist) — use the single-arg join.
+  if (sizeof(WS_WIFI_PASS) <= 1)
+    WiFi.begin(WS_WIFI_SSID);
+  else
+    WiFi.begin(WS_WIFI_SSID, WS_WIFI_PASS);
+  Serial.printf("[ws] sta mac %s, joining '%s', collector %s:%d%s\n",
+                hal.macAddress(), WS_WIFI_SSID, WS_COLLECTOR_HOST,
+                (int)WS_COLLECTOR_PORT, WS_COLLECTOR_PATH);
 
   g_ws.setExtraHeaders("Authorization: Bearer " WS_STATION_TOKEN);
 #if WS_USE_TLS

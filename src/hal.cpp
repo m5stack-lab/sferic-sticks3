@@ -1,6 +1,7 @@
 #include "hal.h"
 
 #include <Preferences.h>
+#include <esp_mac.h>
 
 #include <cstdio>
 
@@ -41,6 +42,17 @@ const char* Hal::stationId() {
                   (unsigned long)(mac & 0xFFFFFF));
   }
   return id;
+}
+
+const char* Hal::macAddress() {
+  static char s[18] = {0};
+  if (!s[0]) {
+    uint8_t m[6];
+    esp_read_mac(m, ESP_MAC_WIFI_STA);
+    std::snprintf(s, sizeof(s), "%02x:%02x:%02x:%02x:%02x:%02x", m[0], m[1], m[2],
+                  m[3], m[4], m[5]);
+  }
+  return s;
 }
 
 void Hal::injectNav(Btn b, BtnEvent e) {

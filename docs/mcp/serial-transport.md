@@ -37,14 +37,15 @@ for fire-and-forget. Replies are `{"id":N,"ok":true,...}` or
 ```
 >{"id":1,"op":"hello"}
 <{"id":1,"ok":true,"station":{
-    "id":"stick-6e27ac","model":"m5stack-sticks3",
+    "id":"stick-6e27ac","mac":"ac:27:6e:d2:5d:0c","model":"m5stack-sticks3",
     "fw_version":"0.1.0 v0.1.0-8-ga03f79d5-dirty",
     "toolsets":["wifi","ble","ir","sensors"],
     "radios":["wifi-2g4","ble","ir-tx","ir-rx"]}}
 ```
 
 `id` is `stick-` + the low 6 hex of the eFuse MAC — stable per device, no
-NVS. `toolsets` is `registry.toolsets()`; `radios` is static for now.
+NVS. `mac` is the full Wi-Fi STA MAC (what an AP's allowlist keys on).
+`toolsets` is `registry.toolsets()`; `radios` is static for now.
 
 ### `status`
 
