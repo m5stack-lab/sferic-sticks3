@@ -5,6 +5,8 @@
 #include <functional>
 #include <string>
 
+#include "link.h"
+
 // Background capture sessions for the streaming tools (ADR-0003 §6). Exactly
 // one runs at a time — single radio, single-threaded loop(). While active the
 // firmware emits NDJSON strike lines over serial, one per event, prefixed
@@ -35,11 +37,13 @@ namespace stream {
 
 void registerTools();  // boot
 
-// begin: "" flashOut + err set on failure (busy | unknown_tool |
-// capability_disabled | start_failed).
-bool begin(const std::string& id, const std::string& params, std::string& flashOut,
-           std::string& err);
-void end(uint32_t& countOut);
+// begin: strikes + the open/close events go back out `out` — the same link
+// the stream_start arrived on (ADR-0009 §5). err set on failure
+// (busy | unknown_tool | capability_disabled | start_failed).
+bool begin(const std::string& id, const std::string& params, Link& out,
+           std::string& flashOut, std::string& err);
+void end(uint32_t& countOut);  // sends the "close" event
+void abort();  // link died — stop the tool + release the radio, send nothing
 void poll();  // call once per loop(); no-op when idle
 
 bool active();

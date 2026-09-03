@@ -3,240 +3,38 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-#include <cstdio>
-#include <cstring>
-
-#include "emit.h"
+#include "dispatch.h"
 #include "hal.h"
-#include "pcap.h"
-#include "registry.h"
-#include "stream.h"
-#include "version.h"
+#include "link.h"
 
 SerialControl serialCtl;
 
 namespace {
 
-void reply(const JsonDocument& d) {
-  // Serialize whole, then one framed write — a byte-streamed multi-KB line can
-  // stall on TX backpressure and be read as fragments by the collector.
-  // (serializeJson(d, String&) *replaces* the string, so build the body
-  // separately and frame it here.)
-  String body;
-  body.reserve(measureJson(d) + 1);
-  serializeJson(d, body);
-  Serial.write('<');
-  Serial.write(reinterpret_cast<const uint8_t*>(body.c_str()), body.length());
-  Serial.write('\n');
-  Serial.flush();
-}
+// The USB-CDC framing of the transport-neutral op vocabulary (ADR-0009 §5):
+// replies are one '<'-prefixed line, stream strikes/events one '!'-prefixed
+// line, sharing the UART with human log output.
+class SerialLink : public Link {
+ public:
+  void sendReply(JsonDocument& d) override { writeLine(d, '<'); }
+  void sendStrike(JsonDocument& d) override { writeLine(d, '!'); }
+  void sendEvent(JsonDocument& d) override { writeLine(d, '!'); }
 
-void replyErr(long id, const char* code) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = false;
-  d["error"] = code;
-  reply(d);
-}
-
-void opHello(long id) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  JsonObject s = d["station"].to<JsonObject>();
-  s["id"] = hal.stationId();
-  s["model"] = "m5stack-sticks3";
-  s["fw_version"] = SFERIC_VERSION " " SFERIC_BUILD;
-  JsonArray ts = s["toolsets"].to<JsonArray>();
-  for (const auto& t : registry.toolsets()) ts.add(t);
-  JsonArray rd = s["radios"].to<JsonArray>();
-  rd.add("wifi-2g4");
-  rd.add("ble");
-  rd.add("ir-tx");
-  rd.add("ir-rx");
-  reply(d);
-}
-
-void opStatus(long id) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["uptime_s"] = millis() / 1000;
-  d["heap"] = (uint32_t)hal.freeHeap();
-  d["batt"] = hal.battPercent();
-  d["on_usb"] = hal.onUsb();
-  d["awake"] = hal.awake();
-  JsonObject c = d["capture"].to<JsonObject>();
-  c["frames"] = capture.frames();
-  c["used"] = (uint32_t)capture.used();
-  c["cap"] = (uint32_t)capture.capacity();
-  c["recording"] = capture.recording();
-  c["full"] = capture.full();
-  reply(d);
-}
-
-void opTools(long id) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  JsonArray arr = d["tools"].to<JsonArray>();
-  for (const auto& t : registry.all()) {
-    JsonObject o = arr.add<JsonObject>();
-    o["id"] = t.id;
-    o["name"] = t.name;
-    o["toolset"] = t.toolset;
-    o["summary"] = t.summary;
-    o["enabled"] = registry.enabled(t.id);
-    o["has_run"] = static_cast<bool>(t.run);
+ private:
+  static void writeLine(const JsonDocument& d, char prefix) {
+    // Serialize whole, then one framed write — a byte-streamed multi-KB line
+    // can stall on TX backpressure and be read as fragments by the collector.
+    String body;
+    body.reserve(measureJson(d) + 1);
+    serializeJson(d, body);
+    Serial.write(prefix);
+    Serial.write(reinterpret_cast<const uint8_t*>(body.c_str()), body.length());
+    Serial.write('\n');
+    Serial.flush();
   }
-  reply(d);
-}
+};
 
-void opRun(long id, JsonObjectConst cmd) {
-  const char* tool = cmd["tool"] | "";
-  if (!*tool) {
-    replyErr(id, "missing_tool");
-    return;
-  }
-  String params;
-  if (!cmd["params"].isNull()) serializeJson(cmd["params"], params);
-
-  const RunResult r = registry.run(tool, params.c_str());
-  if (r.outcome == RunOutcome::Ok) {
-    JsonDocument d;
-    d["id"] = id;
-    d["ok"] = true;
-    JsonDocument res;  // the tool returns a JSON string — re-embed it as JSON
-    if (deserializeJson(res, r.body) == DeserializationError::Ok)
-      d["result"] = res;
-    else
-      d["result"] = r.body;
-    reply(d);
-    return;
-  }
-  const char* code = "error";
-  switch (r.outcome) {
-    case RunOutcome::NotFound:
-      code = "capability_not_present";
-      break;
-    case RunOutcome::Disabled:
-      code = "capability_disabled";
-      break;
-    case RunOutcome::NoHeadlessPath:
-      code = "device_only";
-      break;
-    default:
-      break;
-  }
-  replyErr(id, code);
-}
-
-void opSet(long id, JsonObjectConst cmd) {
-  const char* tool = cmd["tool"] | "";
-  if (!*tool) {
-    replyErr(id, "missing_tool");
-    return;
-  }
-  const bool en = cmd["enabled"] | true;
-  registry.setEnabled(tool, en);
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["enabled"] = registry.enabled(tool);
-  reply(d);
-}
-
-void opStreamStart(long id, JsonObjectConst cmd) {
-  const char* tool = cmd["tool"] | "";
-  if (!*tool) {
-    replyErr(id, "missing_tool");
-    return;
-  }
-  String params;
-  if (!cmd["params"].isNull()) serializeJson(cmd["params"], params);
-  std::string flash, err;
-  if (!stream::begin(tool, params.c_str(), flash, err)) {
-    replyErr(id, err.c_str());
-    return;
-  }
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["flash"] = flash;
-  reply(d);
-}
-
-void opStreamStop(long id) {
-  uint32_t n = 0;
-  const bool wasActive = stream::active();
-  stream::end(n);
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = wasActive;
-  d["count"] = n;
-  if (!wasActive) d["error"] = "not_streaming";
-  reply(d);
-}
-
-void opStreamStatus(long id) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["active"] = stream::active();
-  d["tool"] = stream::activeId();
-  d["flash"] = stream::activeFlash();
-  d["count"] = stream::count();
-  reply(d);
-}
-
-void opEmitArm(long id, JsonObjectConst cmd) {
-  const char* tool = cmd["tool"] | "";
-  if (!*tool) {
-    replyErr(id, "missing_tool");
-    return;
-  }
-  String params;
-  if (!cmd["params"].isNull()) serializeJson(cmd["params"], params);
-  std::string token, err;
-  uint32_t window = 0;
-  if (!emit::arm(tool, params.c_str(), token, window, err)) {
-    replyErr(id, err.c_str());
-    return;
-  }
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["token"] = token;
-  d["expires_ms"] = window;
-  reply(d);
-}
-
-void opEmitFire(long id, JsonObjectConst cmd) {
-  const char* token = cmd["token"] | "";
-  std::string result, err;
-  if (!emit::fire(token, result, err)) {
-    replyErr(id, err.c_str());
-    return;
-  }
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  JsonDocument r;
-  if (deserializeJson(r, result) == DeserializationError::Ok)
-    d["result"] = r;
-  else
-    d["result"] = result;
-  reply(d);
-}
-
-void opEmitStatus(long id) {
-  JsonDocument d;
-  d["id"] = id;
-  d["ok"] = true;
-  d["armed"] = emit::armed();
-  d["tool"] = emit::armedId();
-  reply(d);
-}
+SerialLink g_link;
 
 }  // namespace
 
@@ -244,37 +42,14 @@ void SerialControl::handleLine() {
   buf_[len_] = '\0';
   JsonDocument d;
   if (deserializeJson(d, buf_) != DeserializationError::Ok) {
-    replyErr(0, "bad_json");
+    JsonDocument e;
+    e["id"] = 0;
+    e["ok"] = false;
+    e["error"] = "bad_json";
+    g_link.sendReply(e);
     return;
   }
-  const long id = d["id"] | 0;
-  const char* op = d["op"] | "";
-  JsonObjectConst cmd = d.as<JsonObjectConst>();
-
-  if (!std::strcmp(op, "hello"))
-    opHello(id);
-  else if (!std::strcmp(op, "status"))
-    opStatus(id);
-  else if (!std::strcmp(op, "tools"))
-    opTools(id);
-  else if (!std::strcmp(op, "run"))
-    opRun(id, cmd);
-  else if (!std::strcmp(op, "set"))
-    opSet(id, cmd);
-  else if (!std::strcmp(op, "stream_start"))
-    opStreamStart(id, cmd);
-  else if (!std::strcmp(op, "stream_stop"))
-    opStreamStop(id);
-  else if (!std::strcmp(op, "stream_status"))
-    opStreamStatus(id);
-  else if (!std::strcmp(op, "emit_arm"))
-    opEmitArm(id, cmd);
-  else if (!std::strcmp(op, "emit_fire"))
-    opEmitFire(id, cmd);
-  else if (!std::strcmp(op, "emit_status"))
-    opEmitStatus(id);
-  else
-    replyErr(id, "unknown_op");
+  dispatch::handle(d.as<JsonObjectConst>(), g_link);
 }
 
 void SerialControl::poll() {
@@ -314,7 +89,11 @@ void SerialControl::poll() {
     if (len_ < kMaxLine - 1) {
       buf_[len_++] = static_cast<char>(ch);
     } else {
-      replyErr(0, "line_overflow");
+      JsonDocument e;
+      e["id"] = 0;
+      e["ok"] = false;
+      e["error"] = "line_overflow";
+      g_link.sendReply(e);
       inCmd_ = false;
       len_ = 0;
     }

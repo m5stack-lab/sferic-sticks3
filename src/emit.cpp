@@ -92,5 +92,7 @@ void emit::tick() {
   if (g_pending && millis() > g_deadline) g_pending = nullptr;
 }
 
+void emit::disarm() { g_pending = nullptr; }
+
 bool emit::armed() { return g_pending != nullptr; }
 const char* emit::armedId() { return g_pending ? g_pending->id : ""; }

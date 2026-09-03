@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "stream.h"  // StrikeEmit
+#include "stream_hub.h"  // StrikeEmit
 #include "ui.h"
 
 // Headless streaming (ADR-0003 §6): channel-wide async AP discovery + a

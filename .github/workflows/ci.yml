@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [sferic, sferic-usbhid, sferic-rfpack]
+        env: [sferic, sferic-usbhid, sferic-rfpack, sferic-ws]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

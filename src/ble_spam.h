@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include "stream.h"  // StrikeEmit
+#include "stream_hub.h"  // StrikeEmit
 #include "ui.h"
 
 class NimBLEScan;

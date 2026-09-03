@@ -1,3 +1,6 @@
 .pio/
 .vscode/
 .DS_Store
+
+# per-station WebSocket config — token + Wi-Fi creds (ADR-0009 §6)
+src/ws_config.h

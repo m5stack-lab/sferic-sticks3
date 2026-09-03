@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "stream.h"  // StrikeEmit
+#include "stream_hub.h"  // StrikeEmit
 #include "ui.h"
 
 // WiFi -> Evil Portal. Open SoftAP + catch-all DNS + a generic captive

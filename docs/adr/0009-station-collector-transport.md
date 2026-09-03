@@ -1,9 +1,11 @@
 # ADR-0009 — Station ↔ collector transport: WebSocket
 
-**Status:** Accepted (choice + framing). **Implementation deferred** to the
-Pi collector phase — the serial transport (`docs/mcp/serial-transport.md`)
-covers the tethered dev desk today.
-**Date:** 2026-09-01
+**Status:** Accepted. **Firmware implemented** (2026-09-02) — `env:sferic-ws`,
+`src/ws_station.cpp` + the shared `src/dispatch.*` op handlers,
+`docs/mcp/ws-transport.md`. **Collector side deferred** to the Pi phase (a
+`WebSocketStation` transport + a WS route). The serial transport
+(`docs/mcp/serial-transport.md`) remains the tethered dev-desk path.
+**Date:** 2026-09-01 (decision), 2026-09-02 (firmware)
 **Deciders:** ry-ops (operator)
 **Relates to:** ADR-0003 (companion MCP server — §6 left the wire format
 open), ADR-0007 (fleet composition), ADR-0008 (network uplink)

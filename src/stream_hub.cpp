@@ -1,4 +1,4 @@
-#include "stream.h"
+#include "stream_hub.h"
 
 #include <Arduino.h>
 #include <esp_system.h>
@@ -20,6 +20,7 @@ namespace {
 
 std::vector<StreamTool> g_tools;
 const StreamTool* g_active = nullptr;
+Link* g_link = nullptr;  // the link that started the session (ADR-0009 §5)
 String g_flash;
 uint32_t g_count = 0;
 
@@ -29,19 +30,10 @@ const StreamTool* find(const std::string& id) {
   return nullptr;
 }
 
-void writeLine(const JsonDocument& d, char prefix) {
-  String body;
-  body.reserve(measureJson(d) + 1);
-  serializeJson(d, body);
-  Serial.write(prefix);
-  Serial.write(reinterpret_cast<const uint8_t*>(body.c_str()), body.length());
-  Serial.write('\n');
-  Serial.flush();
-}
-
 // The emit passed into a tool's poll(): wrap `decoded` in the strike envelope
-// and push one '!' line.
+// and hand it to the session's link.
 void emitStrike(const char* kind, const JsonDocument& decoded) {
+  if (!g_link) return;
   JsonDocument d;
   d["v"] = 1;
   d["flash"] = g_flash;
@@ -51,7 +43,7 @@ void emitStrike(const char* kind, const JsonDocument& decoded) {
   d["toolset"] = g_active->toolset;
   d["kind"] = kind;
   d["payload"]["decoded"] = decoded;
-  writeLine(d, '!');
+  g_link->sendStrike(d);
   ++g_count;
 }
 
@@ -74,7 +66,7 @@ void stream::registerTools() {
                      &portalStreamPoll, &portalStreamStop});
 }
 
-bool stream::begin(const std::string& id, const std::string& params,
+bool stream::begin(const std::string& id, const std::string& params, Link& out,
                    std::string& flashOut, std::string& err) {
   if (g_active) {
     err = "busy";
@@ -98,13 +90,14 @@ bool stream::begin(const std::string& id, const std::string& params,
   g_flash = f;
   g_count = 0;
   g_active = t;
+  g_link = &out;
   flashOut = f;
 
   JsonDocument d;
   d["flash"] = g_flash;
   d["event"] = "open";
   d["tool"] = id;
-  writeLine(d, '!');
+  g_link->sendEvent(d);
   return true;
 }
 
@@ -113,13 +106,24 @@ void stream::end(uint32_t& countOut) {
   if (!g_active) return;
   g_active->stop();
 
-  JsonDocument d;
-  d["flash"] = g_flash;
-  d["event"] = "close";
-  d["count"] = g_count;
-  writeLine(d, '!');
+  if (g_link) {
+    JsonDocument d;
+    d["flash"] = g_flash;
+    d["event"] = "close";
+    d["count"] = g_count;
+    g_link->sendEvent(d);
+  }
 
   g_active = nullptr;
+  g_link = nullptr;
+  g_flash = "";
+}
+
+void stream::abort() {
+  if (!g_active) return;
+  g_active->stop();  // release the radio; the link is gone, send nothing
+  g_active = nullptr;
+  g_link = nullptr;
   g_flash = "";
 }
 

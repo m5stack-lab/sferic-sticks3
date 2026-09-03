@@ -1,0 +1,21 @@
+#pragma once
+
+// Copy to src/ws_config.h (gitignored) and fill in. Only used by the
+// sferic-ws build (-DSFERIC_WS). Never commit the real file — token +
+// Wi-Fi creds. ADR-0009 §6: the token is provisioned out of band.
+
+#define WS_WIFI_SSID "your-ssid"
+#define WS_WIFI_PASS "your-passphrase"
+
+// The collector's reachable address (its tailnet IP per ADR-0008), the WS
+// port, and the station endpoint path.
+#define WS_COLLECTOR_HOST "100.64.0.1"
+#define WS_COLLECTOR_PORT 8787
+#define WS_COLLECTOR_PATH "/station"
+
+// Per-station bearer token. Sent as an Authorization header on the upgrade.
+#define WS_STATION_TOKEN "replace-with-a-provisioned-token"
+
+// Set to 1 for wss:// (untrusted segment; needs the collector cert). 0 for
+// plain ws:// on the tailnet / inside WireGuard.
+#define WS_USE_TLS 0

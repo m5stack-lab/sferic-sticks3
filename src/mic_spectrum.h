@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-#include "stream.h"  // StrikeEmit
+#include "stream_hub.h"  // StrikeEmit
 #include "ui.h"
 
 // Sensors -> Mic Spectrum. Records from the ES8311 mic, FFTs it, draws a

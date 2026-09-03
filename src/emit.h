@@ -32,6 +32,7 @@ bool arm(const std::string& id, const std::string& params, std::string& tokenOut
 bool fire(const std::string& token, std::string& resultOut, std::string& err);
 
 void tick();  // expire a stale arm; call once per loop()
+void disarm();  // drop any pending arm (e.g. the controlling link dropped)
 bool armed();
 const char* armedId();
 

@@ -5,11 +5,14 @@
 #include "menu_tree.h"
 #include "registry.h"
 #include "serial_control.h"
-#include "stream.h"
+#include "stream_hub.h"
 #include "theme.h"
 #include "ui.h"
 #ifdef SFERIC_RF_PACK
 #include "rf_pack.h"
+#endif
+#ifdef SFERIC_WS
+#include "ws_station.h"
 #endif
 
 void setup() {
@@ -26,6 +29,9 @@ void setup() {
   registerBuiltinTools();  // ADR-0004
   stream::registerTools();  // headless streaming sessions
   emit::registerTools();    // headless emitters (arm/fire)
+#ifdef SFERIC_WS
+  wsStation.begin();  // persistent uplink to the Pi collector (ADR-0009)
+#endif
   ui.push(makeRootMenu());
   Serial.printf("\n[sferic] up  %d tools\n", (int)registry.all().size());
   for (const auto& t : registry.all())
@@ -34,7 +40,10 @@ void setup() {
 }
 
 void loop() {
-  serialCtl.poll();  // headless command channel (collector transport)
+  serialCtl.poll();  // headless command channel (serial transport)
+#ifdef SFERIC_WS
+  wsStation.loop();  // headless command channel (WebSocket transport)
+#endif
   stream::poll();    // active streaming session, if any
   emit::tick();      // expire a stale emit arm
   hal.update();

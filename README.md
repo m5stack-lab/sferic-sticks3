@@ -36,6 +36,15 @@ for the pingequa RF Pack S3 backpack
 datasheets and unverified — the build boots and reports "RF Pack not
 detected" with no board attached. Same USB mode as `sferic`.
 
+**`sferic-ws`** is the networked station
+([ADR-0009](docs/adr/0009-station-collector-transport.md),
+[ws-transport](docs/mcp/ws-transport.md)): it opens a persistent WebSocket to
+the Pi collector and speaks the same op vocabulary as the serial link
+(`src/dispatch.*` is shared). Needs `src/ws_config.h` — copy
+`src/ws_config.h.example` and fill in the Wi-Fi creds, collector address, and
+per-station token (gitignored). The collector-side endpoint is not built
+yet.
+
 ## Controls
 
 Two buttons: **A** = next / (hold) prev · **B** = select / (hold) back.

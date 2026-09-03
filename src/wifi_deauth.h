@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "stream.h"  // StrikeEmit
+#include "stream_hub.h"  // StrikeEmit
 #include "ui.h"
 
 // Headless streaming session (ADR-0003 §6): passive promiscuous deauth watch,

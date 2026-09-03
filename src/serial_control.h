@@ -8,6 +8,10 @@
 // with '<'; the collector ignores every other line. Bare `a`/`A`/`b`/`B` bytes
 // still drive the menu for desk testing (forwarded to hal.injectNav).
 //
+// This class is now just the USB-CDC *framing* of the transport-neutral op
+// vocabulary — the ops themselves live in src/dispatch.* and are shared with
+// the WebSocket transport (src/ws_station.*, ADR-0009 §5).
+//
 // Grammar (compact JSON, one per line):
 //   >{"id":<int>,"op":"hello"}                         -> capability declaration
 //   >{"id":<int>,"op":"status"}                        -> uptime/heap/batt/capture
