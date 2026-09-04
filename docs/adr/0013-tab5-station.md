@@ -191,3 +191,49 @@ becomes optional.
   cooperative constraint stays documented, not fixed.
 - A change that drops or redefines a committed capability here is a
   superseding ADR.
+
+## Update 2026-09-03 — bring-up spike results (`sferic-tab5/SPIKE-RESULTS.md`)
+
+The spike (§2) ran on the physical board. Outcomes that change the plan:
+
+- **Toolchain: confirmed.** pioarduino platform `54.03.21` + M5Unified +
+  arduino-esp32 3.2.1 builds and flashes for the P4. Needs PlatformIO Core
+  ≥ 6.2 on Python ≥ 3.10 (isolated from the StickS3's 3.9 pio). Display
+  (M5GFX autodetect / ST7121 / 1280×720), touch (GT911-class), IMU
+  (BMI270), 32 MB PSRAM all work with no driver work → **§3/§4 unblocked as
+  planned.**
+
+- **C6 radio: narrower than §6 assumed.** `WiFi.setPins(12,13,11,10,9,8,15)`
+  (the Tab5's SDIO2→C6 wiring) brings `esp_hosted` up; **STA connect + scan
+  work.** But over `esp_hosted`:
+  - `esp_wifi_set_promiscuous()` → `ESP_ERR_NOT_SUPPORTED`
+  - `esp_wifi_80211_tx()` → `ESP_ERR_NOT_SUPPORTED`
+  - BLE and OpenThread/802.15.4 are **compiled out** of the stock P4 libs
+    (`CONFIG_BT_ENABLED`, `CONFIG_OPENTHREAD_ENABLED` not set).
+
+  So with stock tooling the Tab5's radio is **`wifi.scan` + `wifi.portal`
+  only.** The monitor-class `wifi.*` tools, `ble.*`, and `thread` /
+  `ieee802154` need a custom Arduino-as-IDF-component build — and monitor /
+  raw-TX are `esp_hosted` *protocol* limits, so they likely stay
+  unavailable even then.
+
+**Revised §6 toolset scope for the Tab5:**
+
+| Toolset | Revised status |
+|---|---|
+| `camera` | unchanged — the Tab5's headline capability |
+| `usbhost` | unchanged |
+| `canbus` / `rs485` | unchanged |
+| `wifi` | **`wifi.scan` + `wifi.portal` only** (no monitor/probe/handshake/deauth — those stay StickS3-only) |
+| `ble` | **dropped from initial scope** — needs custom firmware; revisit if BLE-scan value justifies it |
+| `thread` / `ieee802154` | **dropped from initial scope** — needs custom firmware and may not be transportable over `esp_hosted` at all; a separate spike if pursued |
+
+This does not change the ADR's direction — it sharpens it. The Tab5 was
+always the "rich touch field station" (§8), not a radio node; the spike
+confirms the radio story is thin and the **camera / USB / screen+keyboard /
+compute** are the real reasons it is in the fleet. The fleet model holds:
+the StickS3 (+ RF Pack) sniffs and emits; the Tab5 scans, sees, and is the
+operator console.
+
+Open spike items: microSD (on-chip LDO power config), the keyboard
+connection, camera bring-up.
