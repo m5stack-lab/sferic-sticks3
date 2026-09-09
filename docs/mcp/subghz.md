@@ -46,22 +46,71 @@ datasheet 433 MHz offset. Errors: `radio_absent`, `radio_busy`.
 
 ---
 
-## Planned (ADR-0001 — firmware stubs to fill on first hardware)
+## `subghz.capture` — implemented (firmware: Learn / Replay)
 
-### `subghz.capture`
-`{ station, mhz, modulation?, ms }` → record a raw OOK/ASK burst from the
-CC1101 async FIFO, return it as a strike per `docs/mcp/strike-format.md`
-(`payload.raw.data` = us-timings). No decode required.
+Record one raw OOK burst from the CC1101 (async serial demod on GDO0) and
+return it as a strike.
 
-### `subghz.replay`
-`{ station, strike, repeats? }` → re-transmit a captured `subghz` strike
-verbatim on the CC1101. On-device this is two-step (arm, then confirm) like
-every emitter — see `src/emit.*` / `docs/mcp/headless.md`.
+**Params**
 
-### `subghz.decode`
-`{ station, ms }` → continuous framing of OOK/ASK traffic → PT2262-class /
-TPMS / weather-station / doorbell frames `{ protocol, bits, value }`, not
-stored. A `StreamTool` (`src/stream.*`).
+| name | type | default | notes |
+|---|---|---|---|
+| `station` | string | — | required |
+| `ms` | int | `5000` | listen budget; returns as soon as a burst frames |
+| `mhz` | float | `433.92` | carrier |
+
+**Returns** — a strike per `docs/mcp/strike-format.md`:
+
+```json
+{
+  "v": 1, "toolset": "subghz", "kind": "ook", "ts": "t+41234",
+  "meta": { "frequency_hz": 433920000, "modulation": "OOK",
+            "duration_us": 18240, "edge_count": 132 },
+  "payload": {
+    "raw": { "encoding": "us-timings", "data": [420, 1280, 1290, 410, "…"] },
+    "decoded": { "protocol": "PT2262", "bits": 24, "value": "0x1A2B3C",
+                 "te_us": 420 }
+  }
+}
+```
+
+`payload.decoded` is present only when the burst frames as a PT2262 / EV1527
+(rc-switch protocol 1) code. Errors: `radio_absent`, `radio_busy`, `timeout`.
+
+## `subghz.replay` — implemented (emit; arm/fire)
+
+Re-transmit a captured OOK burst verbatim on the CC1101 (async TX, MCU keys
+GDO0). Two-step like every emitter — `emit_arm` then `emit_fire`
+(`docs/mcp/headless.md`).
+
+**Params** (`emit_arm`)
+
+| name | type | default | notes |
+|---|---|---|---|
+| `station` | string | — | required |
+| `raw` | int[] | — | µs mark/space, `[0]` = mark. Also accepts a full strike object (`payload.raw.data`) |
+| `mhz` | float | `433.92` | carrier |
+| `repeats` | int | `5` | 1–20 frame repeats |
+
+**Returns** (`emit_fire`): `{ "sent": true, "frames": 5 }`. Errors:
+`radio_absent`, `radio_busy`, `bad_params`.
+
+> **UNVERIFIED:** the CC1101 OOK config and the async-TX keying are the
+> standard SmartRC / rc-switch values but are not yet bench-confirmed on the
+> RF Pack S3 — `docs/hardware/rf-pack-s3.md`.
+
+## `subghz.decode` — implemented (firmware: Protocol Decode)
+
+`{ station, mhz? }` → continuous OOK framing → PT2262 / EV1527 frames
+`{ protocol, bits, value, te_us }`, streamed as `code` strikes, not stored.
+A `StreamTool` (`src/stream_hub.*`): `stream_start` / `stream_stop`.
+
+---
+
+## Planned (ADR-0001 — not yet built)
+
+- **TPMS / weather-station / doorbell** decoders on top of `subghz.decode`
+  (only PT2262/EV1527 framing today).
 
 ---
 

@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include "hal.h"
 #include "rf_pack.h"
@@ -29,9 +30,21 @@ constexpr uint8_t CONFIG_RX = 0x02 | 0x01;
 
 void radioUp() {
   rfpack::nrf24Ce(false);
-  rfpack::nrf24WriteReg(REG_CONFIG, CONFIG_RX);
+  // An ESP32 reset does NOT reset the nRF24 (its own power domain), so the
+  // sniff tool's config (2-byte SETUP_AW, pseudo-address, DYNPD/FEATURE) can
+  // survive a reboot and skew RPD. Restore the datasheet power-on defaults
+  // for everything the other tools touch, then bring RX up.
+  rfpack::nrf24WriteReg(REG_CONFIG, 0x00);     // power down while reconfiguring
   rfpack::nrf24WriteReg(REG_EN_AA, 0x00);      // no auto-ack
-  rfpack::nrf24WriteReg(REG_RF_SETUP, 0x0F);   // 1 Mbps, 0 dBm, LNA on (approx)
+  rfpack::nrf24WriteReg(0x02, 0x03);           // EN_RXADDR default
+  rfpack::nrf24WriteReg(0x03, 0x03);           // SETUP_AW = 5-byte (default)
+  rfpack::nrf24WriteReg(0x04, 0x00);           // SETUP_RETR off
+  rfpack::nrf24WriteReg(REG_RF_SETUP, 0x0F);   // data rate / power (as before)
+  rfpack::nrf24WriteReg(0x1C, 0x00);           // DYNPD off
+  rfpack::nrf24WriteReg(0x1D, 0x00);           // FEATURE off
+  rfpack::nrf24WriteReg(0x07, 0x70);           // clear IRQ latches
+  rfpack::nrf24Command(0xE2);                  // FLUSH_RX
+  rfpack::nrf24WriteReg(REG_CONFIG, CONFIG_RX);  // PWR_UP | PRIM_RX
   delay(2);                                    // Tpd2stby
 }
 
@@ -48,6 +61,73 @@ bool carrierOn(int ch) {
   delayMicroseconds(200);  // > 130us Tstby2a + settle
   rfpack::nrf24Ce(false);
   return rfpack::nrf24ReadReg(REG_RPD) & 0x01;
+}
+
+// ---- promiscuous sniff (UNVERIFIED) --------------------------------------
+// Goodspeed's trick: a 2-byte address whose bytes look like the on-air
+// preamble (0x55 / 0xAA), CRC + auto-ack off, so any packet whose first bits
+// match gets latched into the FIFO. Coarse and lossy — a starting point.
+constexpr uint8_t REG_EN_RXADDR = 0x02;
+constexpr uint8_t REG_SETUP_AW = 0x03;
+constexpr uint8_t REG_RF_SETUP_R = 0x06;
+constexpr uint8_t REG_STATUS = 0x07;
+constexpr uint8_t REG_RX_ADDR_P0 = 0x0A;
+constexpr uint8_t REG_RX_PW_P0 = 0x11;
+constexpr uint8_t REG_FIFO_STATUS = 0x17;
+constexpr uint8_t REG_DYNPD = 0x1C;
+constexpr uint8_t REG_FEATURE = 0x1D;
+constexpr uint8_t CMD_FLUSH_RX = 0xE2;
+constexpr uint8_t SNIFF_PW = 32;
+
+void sniffUp(uint8_t ch) {
+  rfpack::nrf24Ce(false);
+  rfpack::nrf24WriteReg(REG_CONFIG, 0x00);  // CRC off, power down first
+  delay(2);
+  rfpack::nrf24WriteReg(REG_EN_AA, 0x00);       // no auto-ack
+  rfpack::nrf24WriteReg(REG_EN_RXADDR, 0x01);   // pipe 0 only
+  rfpack::nrf24WriteReg(REG_SETUP_AW, 0x00);    // 2-byte address (illegal-but-works)
+  rfpack::nrf24WriteReg(0x04, 0x00);            // SETUP_RETR off
+  rfpack::nrf24WriteReg(REG_RF_CH, ch);
+  rfpack::nrf24WriteReg(REG_RF_SETUP_R, 0x0E);  // 2 Mbps, 0 dBm, LNA
+  const uint8_t addr[2] = {0x55, 0x55};
+  rfpack::nrf24WriteRegN(REG_RX_ADDR_P0, addr, 2);
+  rfpack::nrf24WriteReg(REG_RX_PW_P0, SNIFF_PW);
+  rfpack::nrf24WriteReg(REG_DYNPD, 0x00);
+  rfpack::nrf24WriteReg(REG_FEATURE, 0x00);
+  rfpack::nrf24Command(CMD_FLUSH_RX);
+  rfpack::nrf24WriteReg(REG_STATUS, 0x70);      // clear IRQ latches
+  rfpack::nrf24WriteReg(REG_CONFIG, 0x73);      // mask IRQ, CRC off, PWR_UP, PRIM_RX
+  delay(2);
+  rfpack::nrf24Ce(true);
+  delayMicroseconds(150);
+}
+
+void sniffDown() {
+  rfpack::nrf24Ce(false);
+  rfpack::nrf24WriteReg(REG_CONFIG, 0x00);
+}
+
+// Drain one frame if the FIFO has one. Returns payload length (SNIFF_PW) or 0.
+uint8_t sniffNext(uint8_t* buf) {
+  if (rfpack::nrf24ReadReg(REG_FIFO_STATUS) & 0x01) return 0;  // RX_EMPTY
+  rfpack::nrf24ReadPayload(buf, SNIFF_PW);
+  rfpack::nrf24WriteReg(REG_STATUS, 0x40);  // clear RX_DR
+  return SNIFF_PW;
+}
+
+void b64(const uint8_t* in, size_t n, char* out) {
+  static const char* a =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  size_t o = 0;
+  for (size_t i = 0; i < n; i += 3) {
+    const uint32_t v = (in[i] << 16) | ((i + 1 < n ? in[i + 1] : 0) << 8) |
+                       (i + 2 < n ? in[i + 2] : 0);
+    out[o++] = a[(v >> 18) & 63];
+    out[o++] = a[(v >> 12) & 63];
+    out[o++] = (i + 1 < n) ? a[(v >> 6) & 63] : '=';
+    out[o++] = (i + 2 < n) ? a[v & 63] : '=';
+  }
+  out[o] = 0;
 }
 }  // namespace
 
@@ -182,6 +262,128 @@ std::string nrf24ScanJson(const std::string& params) {
   std::string out;
   serializeJson(d, out);
   return out;
+}
+
+// ============================================================= sniff =======
+
+void Nrf24SniffScreen::onEnter() {
+  dirty_ = true;
+  frames_ = 0;
+  lastLen_ = 0;
+  detected_ =
+      rfpack::presence().nrf24 && rfpack::acquire(rfpack::Radio::Nrf24);
+  if (detected_) sniffUp(ch_);
+}
+
+void Nrf24SniffScreen::onExit() {
+  if (detected_) {
+    sniffDown();
+    rfpack::release();
+  }
+}
+
+void Nrf24SniffScreen::tick() {
+  const BtnEvent a = hal.event(Btn::A);
+  const BtnEvent b = hal.event(Btn::B);
+  if (b == BtnEvent::Hold) {
+    pop();
+    return;
+  }
+  if (a == BtnEvent::Click && detected_) {
+    ch_ = (ch_ + 1) % 126;
+    sniffUp(ch_);
+    dirty_ = true;
+  }
+
+  if (detected_) {
+    uint8_t buf[32];
+    for (int i = 0; i < 8; ++i) {
+      const uint8_t len = sniffNext(buf);
+      if (!len) break;
+      memcpy(last_, buf, len);
+      lastLen_ = len;
+      frames_++;
+      dirty_ = true;
+    }
+  }
+
+  const uint32_t now = hal.nowMs();
+  if (now - lastDraw_ > 200) dirty_ = true;
+  if (dirty_) {
+    draw();
+    dirty_ = false;
+    lastDraw_ = now;
+  }
+}
+
+void Nrf24SniffScreen::draw() {
+  const Theme& th = theme();
+  auto& g = hal.gfx();
+  char t[32];
+  std::snprintf(t, sizeof(t), "Sniff  ch %d", ch_);
+  kit::begin(t, toolsetAccent("nrf24"));
+
+  if (!detected_) {
+    kit::headline("NO RADIO", th.bad);
+    kit::line(0, rfpack::present() ? "nRF24 busy" : "RF Pack not detected",
+              th.fgDim);
+    kit::end("B- back");
+    return;
+  }
+
+  char l[40];
+  std::snprintf(l, sizeof(l), "%lu MHz", (unsigned long)(2400 + ch_));
+  kit::headline(l, frames_ ? th.ok : th.fgDim);
+  std::snprintf(l, sizeof(l), "frames %lu", (unsigned long)frames_);
+  kit::line(0, l);
+
+  g.setTextSize(1);
+  g.setTextColor(th.fgDim, th.bg);
+  int y = kit::BODY_Y + kit::BODY_H - 26;
+  for (int row = 0; row < 2; ++row) {
+    char hex[49] = {0};
+    for (int i = 0; i < 8; ++i) {
+      const int idx = row * 8 + i;
+      std::snprintf(hex + i * 3, 4, "%02X ", idx < lastLen_ ? last_[idx] : 0);
+    }
+    g.setCursor(6, y);
+    g.print(hex);
+    y += 11;
+  }
+  kit::end("A ch+   B- back");
+}
+
+bool nrf24SniffStreamStart(const std::string& params) {
+  if (!rfpack::presence().nrf24) return false;
+  if (!rfpack::acquire(rfpack::Radio::Nrf24)) return false;
+  uint8_t ch = 2;
+  JsonDocument p;
+  if (deserializeJson(p, params) == DeserializationError::Ok &&
+      p["ch"].is<uint8_t>())
+    ch = p["ch"];
+  sniffUp(ch);
+  return true;
+}
+
+void nrf24SniffStreamPoll(const StrikeEmit& emit) {
+  uint8_t buf[32];
+  for (int i = 0; i < 8; ++i) {
+    const uint8_t len = sniffNext(buf);
+    if (!len) break;
+    char enc[48];
+    b64(buf, len, enc);
+    JsonDocument d;
+    d["bytes"] = len;
+    JsonObject raw = d["raw"].to<JsonObject>();
+    raw["encoding"] = "bytes-b64";
+    raw["data"] = enc;
+    emit("frame", d);
+  }
+}
+
+void nrf24SniffStreamStop() {
+  sniffDown();
+  rfpack::release();
 }
 
 #endif  // SFERIC_RF_PACK

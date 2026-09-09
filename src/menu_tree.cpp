@@ -210,10 +210,22 @@ void registerBuiltinTools() {
                 "433 MHz occupancy sweep (CC1101 RSSI)",
                 [] { return static_cast<Screen*>(new SubGhzScanScreen()); },
                 [](const std::string& p) { return subghzScanJson(p); }});
+  registry.add({"subghz.capture", "Learn / Replay", "subghz",
+                "Capture and re-send a raw 433 MHz OOK burst",
+                [] { return static_cast<Screen*>(new SubGhzLearnScreen()); },
+                [](const std::string& p) {
+                  return subghzCaptureJson(p.empty() ? "{\"ms\":5000}" : p);
+                }});
+  registry.add({"subghz.decode", "Protocol Decode", "subghz",
+                "Continuous OOK framing (PT2262 / EV1527, no store)",
+                [] { return static_cast<Screen*>(new SubGhzDecodeScreen()); }});
   registry.add({"nrf24.scan", "Band Scan", "nrf24",
                 "2.4 GHz carrier-detect sweep (nRF24 RPD)",
                 [] { return static_cast<Screen*>(new Nrf24ScanScreen()); },
                 [](const std::string& p) { return nrf24ScanJson(p); }});
+  registry.add({"nrf24.sniff", "Sniff", "nrf24",
+                "Promiscuous 2.4 GHz frame capture (authorized testing)",
+                [] { return static_cast<Screen*>(new Nrf24SniffScreen()); }});
 #endif
 }
 

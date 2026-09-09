@@ -62,10 +62,27 @@ uint8_t cc1101Strobe(uint8_t cmd);
 uint8_t cc1101ReadReg(uint8_t addr);        // config space
 uint8_t cc1101ReadStatus(uint8_t addr);     // status space (burst bit)
 void cc1101WriteReg(uint8_t addr, uint8_t val);
+// Config-register burst write, addr auto-increments (for a config table).
+void cc1101WriteBurst(uint8_t addr, const uint8_t* data, uint32_t n);
+// PATABLE — the OOK power ramp ([0]=off level, [1]=on level).
+void cc1101WritePaTable(const uint8_t* data, uint32_t n);
+// GDO0 (GPIO 3) as a raw line. In async serial mode it is the demodulated
+// data out (RX) or the data in (TX): read it to sample OOK, or switch it to
+// an output and drive it to key the transmitter. `cc1101Gdo0Output(false)`
+// returns it to the CC1101 (INPUT) — always pair the two.
+int cc1101Gdo0();                 // read the async data bit
+void cc1101Gdo0Output(bool on);   // true: MCU drives GDO0; false: hand back
+void cc1101Gdo0Write(bool high);  // only meaningful while Output(true)
 
 // nRF24: read/write a register (1 byte), pulse CE.
 uint8_t nrf24ReadReg(uint8_t addr);
 void nrf24WriteReg(uint8_t addr, uint8_t val);
 void nrf24Ce(bool high);
+// Multi-byte register access, a bare command strobe, and an RX-payload read.
+void nrf24ReadRegN(uint8_t addr, uint8_t* buf, uint32_t n);
+void nrf24WriteRegN(uint8_t addr, const uint8_t* buf, uint32_t n);
+uint8_t nrf24Command(uint8_t cmd);  // e.g. FLUSH_RX (0xE2); returns STATUS
+uint8_t nrf24Status();
+void nrf24ReadPayload(uint8_t* buf, uint32_t n);  // R_RX_PAYLOAD
 
 }  // namespace rfpack

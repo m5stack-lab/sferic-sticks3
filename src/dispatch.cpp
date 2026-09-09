@@ -11,6 +11,9 @@
 #include "registry.h"
 #include "stream_hub.h"
 #include "version.h"
+#ifdef SFERIC_RF_PACK
+#include "rf_pack.h"
+#endif
 
 namespace {
 
@@ -225,6 +228,10 @@ void dispatch::stationInfo(JsonObject s) {
   rd.add("ble");
   rd.add("ir-tx");
   rd.add("ir-rx");
+#ifdef SFERIC_RF_PACK
+  if (rfpack::presence().cc1101) rd.add("cc1101-subghz");
+  if (rfpack::presence().nrf24) rd.add("nrf24-2g4");
+#endif
 }
 
 void dispatch::handle(JsonObjectConst cmd, Link& link) {

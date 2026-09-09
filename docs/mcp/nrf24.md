@@ -52,13 +52,43 @@ coarse occupancy map, not a calibrated spectrum. Errors: `radio_absent`,
 
 ---
 
-## Planned (ADR-0001 — firmware stubs to fill on first hardware)
+## `nrf24.sniff` — implemented (firmware: Sniff)
 
-### `nrf24.sniff`
-`{ station, ch?, ms }` → promiscuous-ish capture using a 2-byte address and
-`EN_DPL`, emit each caught frame as a strike per
-`docs/mcp/strike-format.md`. A `StreamTool` (`src/stream.*`). Against the
-operator's own devices/dongles only.
+Promiscuous-ish capture: a 2-byte pseudo-address (`0x55 0x55`, Goodspeed's
+preamble trick), CRC + auto-ack off, fixed 32-byte payload. Drains the RX
+FIFO and streams one strike per frame. A `StreamTool` (`src/stream_hub.*`):
+`stream_start` / `stream_stop`.
+
+**Params** (`stream_start`)
+
+| name | type | default | notes |
+|---|---|---|---|
+| `station` | string | — | required |
+| `ch` | int | `2` | 2.4 GHz channel (2400 + `ch` MHz); change and re-scan on device with `A` |
+
+**Strike** (`kind: "frame"`):
+
+```json
+{ "toolset": "nrf24", "kind": "frame",
+  "payload": { "decoded": {
+    "bytes": 32,
+    "raw": { "encoding": "bytes-b64", "data": "VVVV…" } } } }
+```
+
+> The stream envelope (`src/stream_hub.cpp`) nests every tool's emit under
+> `payload.decoded`, so the raw bytes land at `payload.decoded.raw` rather
+> than `payload.raw`. Cosmetic; revisit if the envelope grows a raw slot.
+
+> **UNVERIFIED:** the promiscuous config (illegal 2-byte `SETUP_AW`, no CRC)
+> is the well-known Goodspeed / Mousejack approach but is not yet
+> bench-confirmed on the RF Pack S3 — expect a high false-frame rate and
+> tune `RF_SETUP` / the pseudo-address on first hardware
+> (`docs/hardware/rf-pack-s3.md`). Against the operator's own
+> devices/dongles only.
+
+---
+
+## Planned (ADR-0001 — not yet built)
 
 ### `nrf24.hid_research` (Mousejack-style)
 Parked. Research-only, against the operator's own wireless HID dongles.

@@ -11,6 +11,9 @@
 #include "ir_tvbgone.h"
 #include "registry.h"
 #include "usb_hid.h"
+#ifdef SFERIC_RF_PACK
+#include "subghz.h"
+#endif
 
 namespace {
 constexpr uint32_t kWindowMs = 60000;
@@ -34,6 +37,9 @@ void emit::registerTools() {
   g_tools.push_back({"ble.hid", "ble", &bleHidArm, &bleHidEmit});
 #ifdef SFERIC_USB_HID
   g_tools.push_back({"usb.hid", "usb", &usbHidArm, &usbHidEmit});
+#endif
+#ifdef SFERIC_RF_PACK
+  g_tools.push_back({"subghz.replay", "subghz", nullptr, &subghzReplayEmit});
 #endif
 }
 

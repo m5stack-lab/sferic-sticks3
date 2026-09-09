@@ -19,6 +19,7 @@ bool g_begun = false;
 constexpr uint8_t CC1101_WRITE = 0x00;
 constexpr uint8_t CC1101_READ = 0x80;
 constexpr uint8_t CC1101_BURST = 0x40;
+constexpr uint8_t CC1101_PATABLE = 0x3E;
 constexpr uint8_t CC1101_SRES = 0x30;   // reset strobe
 constexpr uint8_t CC1101_SNOP = 0x3D;   // no-op (returns status byte)
 constexpr uint8_t CC1101_PARTNUM = 0x30;  // status reg (read w/ burst bit)
@@ -172,6 +173,67 @@ void nrf24WriteReg(uint8_t addr, uint8_t val) {
 }
 
 void nrf24Ce(bool high) { digitalWrite(PIN_NRF24_CE, high ? HIGH : LOW); }
+
+void cc1101WriteBurst(uint8_t addr, const uint8_t* data, uint32_t n) {
+  g_bus.beginTransaction(settings());
+  digitalWrite(PIN_CC1101_CSN, LOW);
+  g_bus.transfer((addr & 0x3F) | CC1101_WRITE | CC1101_BURST);
+  for (uint32_t i = 0; i < n; ++i) g_bus.transfer(data[i]);
+  digitalWrite(PIN_CC1101_CSN, HIGH);
+  g_bus.endTransaction();
+}
+
+void cc1101WritePaTable(const uint8_t* data, uint32_t n) {
+  cc1101WriteBurst(CC1101_PATABLE, data, n);
+}
+
+int cc1101Gdo0() { return digitalRead(PIN_CC1101_GDO0); }
+
+void cc1101Gdo0Output(bool on) {
+  pinMode(PIN_CC1101_GDO0, on ? OUTPUT : INPUT);
+}
+
+void cc1101Gdo0Write(bool high) {
+  digitalWrite(PIN_CC1101_GDO0, high ? HIGH : LOW);
+}
+
+void nrf24ReadRegN(uint8_t addr, uint8_t* buf, uint32_t n) {
+  g_bus.beginTransaction(settings());
+  digitalWrite(PIN_NRF24_CSN, LOW);
+  g_bus.transfer(NRF24_R_REGISTER | (addr & 0x1F));
+  for (uint32_t i = 0; i < n; ++i) buf[i] = g_bus.transfer(NRF24_NOP);
+  digitalWrite(PIN_NRF24_CSN, HIGH);
+  g_bus.endTransaction();
+}
+
+void nrf24WriteRegN(uint8_t addr, const uint8_t* buf, uint32_t n) {
+  g_bus.beginTransaction(settings());
+  digitalWrite(PIN_NRF24_CSN, LOW);
+  g_bus.transfer(NRF24_W_REGISTER | (addr & 0x1F));
+  for (uint32_t i = 0; i < n; ++i) g_bus.transfer(buf[i]);
+  digitalWrite(PIN_NRF24_CSN, HIGH);
+  g_bus.endTransaction();
+}
+
+uint8_t nrf24Command(uint8_t cmd) {
+  g_bus.beginTransaction(settings());
+  digitalWrite(PIN_NRF24_CSN, LOW);
+  const uint8_t st = g_bus.transfer(cmd);
+  digitalWrite(PIN_NRF24_CSN, HIGH);
+  g_bus.endTransaction();
+  return st;
+}
+
+uint8_t nrf24Status() { return nrf24Command(NRF24_NOP); }
+
+void nrf24ReadPayload(uint8_t* buf, uint32_t n) {
+  g_bus.beginTransaction(settings());
+  digitalWrite(PIN_NRF24_CSN, LOW);
+  g_bus.transfer(0x61);  // R_RX_PAYLOAD
+  for (uint32_t i = 0; i < n; ++i) buf[i] = g_bus.transfer(NRF24_NOP);
+  digitalWrite(PIN_NRF24_CSN, HIGH);
+  g_bus.endTransaction();
+}
 
 }  // namespace rfpack
 

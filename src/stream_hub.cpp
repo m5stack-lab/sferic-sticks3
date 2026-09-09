@@ -15,6 +15,10 @@
 #include "wifi_deauth.h"
 #include "wifi_handshake.h"
 #include "wifi_monitor.h"
+#ifdef SFERIC_RF_PACK
+#include "nrf24.h"
+#include "subghz.h"
+#endif
 
 namespace {
 
@@ -64,6 +68,12 @@ void stream::registerTools() {
                      &wardriveStreamPoll, &wardriveStreamStop});
   g_tools.push_back({"wifi.portal", "wifi", &portalStreamStart,
                      &portalStreamPoll, &portalStreamStop});
+#ifdef SFERIC_RF_PACK
+  g_tools.push_back({"subghz.decode", "subghz", &subghzDecodeStreamStart,
+                     &subghzDecodeStreamPoll, &subghzDecodeStreamStop});
+  g_tools.push_back({"nrf24.sniff", "nrf24", &nrf24SniffStreamStart,
+                     &nrf24SniffStreamPoll, &nrf24SniffStreamStop});
+#endif
 }
 
 bool stream::begin(const std::string& id, const std::string& params, Link& out,
