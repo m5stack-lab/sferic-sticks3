@@ -386,4 +386,118 @@ void nrf24SniffStreamStop() {
   rfpack::release();
 }
 
+// =========================================================== waterfall =====
+
+namespace {
+uint8_t rpdSamples(int ch, int n) {
+  uint8_t hits = 0;
+  rfpack::nrf24Ce(false);
+  rfpack::nrf24WriteReg(REG_RF_CH, (uint8_t)ch);
+  for (int i = 0; i < n; ++i) {
+    rfpack::nrf24Ce(true);
+    delayMicroseconds(200);
+    rfpack::nrf24Ce(false);
+    if (rfpack::nrf24ReadReg(REG_RPD) & 0x01) hits++;
+  }
+  return hits;
+}
+
+uint16_t rpdHeat(uint8_t hits) {
+  switch (hits) {
+    case 0:
+      return rgb565(0, 0, 24);
+    case 1:
+      return rgb565(0, 70, 150);
+    case 2:
+      return rgb565(40, 200, 120);
+    default:
+      return rgb565(255, 190, 0);
+  }
+}
+}  // namespace
+
+void Nrf24WaterfallScreen::onEnter() {
+  dirty_ = true;
+  head_ = 0;
+  ch_ = 0;
+  for (auto& r : hist_)
+    for (auto& c : r) c = 0;
+  for (auto& c : row_) c = 0;
+  detected_ =
+      rfpack::presence().nrf24 && rfpack::acquire(rfpack::Radio::Nrf24);
+  if (detected_) radioUp();
+}
+
+void Nrf24WaterfallScreen::onExit() {
+  if (detected_) {
+    radioDown();
+    rfpack::release();
+  }
+}
+
+void Nrf24WaterfallScreen::tick() {
+  const BtnEvent a = hal.event(Btn::A);
+  const BtnEvent b = hal.event(Btn::B);
+  if (b == BtnEvent::Hold) {
+    pop();
+    return;
+  }
+  if (a == BtnEvent::Click) {
+    for (auto& r : hist_)
+      for (auto& c : r) c = 0;
+    dirty_ = true;
+  }
+
+  if (detected_) {
+    for (int k = 0; k < 20 && ch_ < kChannels; ++k, ++ch_)
+      row_[ch_] = rpdSamples(ch_, kDwell);
+    if (ch_ >= kChannels) {
+      ch_ = 0;
+      head_ = (head_ + 1) % kRows;
+      for (int i = 0; i < kChannels; ++i) hist_[head_][i] = row_[i];
+      dirty_ = true;
+    }
+  }
+
+  if (dirty_) {
+    draw();
+    dirty_ = false;
+  }
+}
+
+void Nrf24WaterfallScreen::draw() {
+  const Theme& th = theme();
+  auto& g = hal.gfx();
+  kit::begin("2.4GHz Waterfall", toolsetAccent("nrf24"));
+
+  if (!detected_) {
+    kit::headline("NO RADIO", th.bad);
+    kit::line(0, rfpack::present() ? "nRF24 busy" : "RF Pack not detected",
+              th.fgDim);
+    kit::end("B- back");
+    return;
+  }
+
+  const int rh = kit::BODY_H / kRows > 0 ? kit::BODY_H / kRows : 1;
+  g.startWrite();
+  for (int age = 0; age < kRows; ++age) {
+    const int hr = (head_ - age + kRows * 4) % kRows;
+    const int y = kit::BODY_Y + kit::BODY_H - (age + 1) * rh;
+    if (y < kit::BODY_Y) break;
+    for (int c = 0; c < kChannels; ++c) {
+      const int x0 = c * kit::W / kChannels;
+      const int x1 = (c + 1) * kit::W / kChannels;
+      g.fillRect(x0, y, x1 - x0 > 0 ? x1 - x0 : 1, rh, rpdHeat(hist_[hr][c]));
+    }
+  }
+  g.endWrite();
+
+  g.setTextSize(1);
+  g.setTextColor(th.fg, th.bg);
+  g.setCursor(4, kit::BODY_Y + 1);
+  g.print("2400 - 2525 MHz");
+
+  kit::end("A clear   B- back");
+}
+
 #endif  // SFERIC_RF_PACK

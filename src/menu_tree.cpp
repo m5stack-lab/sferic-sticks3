@@ -219,6 +219,9 @@ void registerBuiltinTools() {
   registry.add({"subghz.decode", "Protocol Decode", "subghz",
                 "Continuous OOK framing (PT2262 / EV1527, no store)",
                 [] { return static_cast<Screen*>(new SubGhzDecodeScreen()); }});
+  registry.add({"subghz.waterfall", "Waterfall", "subghz",
+                "Time-scrolling 433 MHz RSSI spectrogram",
+                [] { return static_cast<Screen*>(new SubGhzWaterfallScreen()); }});
   registry.add({"nrf24.scan", "Band Scan", "nrf24",
                 "2.4 GHz carrier-detect sweep (nRF24 RPD)",
                 [] { return static_cast<Screen*>(new Nrf24ScanScreen()); },
@@ -226,6 +229,9 @@ void registerBuiltinTools() {
   registry.add({"nrf24.sniff", "Sniff", "nrf24",
                 "Promiscuous 2.4 GHz frame capture (authorized testing)",
                 [] { return static_cast<Screen*>(new Nrf24SniffScreen()); }});
+  registry.add({"nrf24.waterfall", "Waterfall", "nrf24",
+                "Time-scrolling 2.4 GHz carrier-detect spectrogram",
+                [] { return static_cast<Screen*>(new Nrf24WaterfallScreen()); }});
 #endif
 }
 

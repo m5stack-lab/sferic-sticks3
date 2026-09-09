@@ -108,3 +108,29 @@ class SubGhzDecodeScreen : public Screen {
 bool subghzDecodeStreamStart(const std::string& params);
 void subghzDecodeStreamPoll(const StrikeEmit& emit);
 void subghzDecodeStreamStop();
+
+// ---------------------------------------------------------- waterfall -------
+
+// SubGHz > Waterfall. Time-scrolling 433 MHz RSSI spectrogram — the same
+// CC1101 sweep as Band Scan, stacked as rows so bursts show as streaks.
+// Display-only (no headless). A = cycle contrast, B-hold = back.
+class SubGhzWaterfallScreen : public Screen {
+ public:
+  static constexpr int kBins = 60;
+  static constexpr int kRows = 52;
+
+  void onEnter() override;
+  void onExit() override;
+  void tick() override;
+
+ private:
+  int8_t hist_[kRows][kBins];  // dBm per bin, newest at head_
+  int head_ = 0;
+  int bin_ = 0;
+  int8_t row_[kBins];
+  uint8_t gain_ = 1;  // contrast multiplier 1..3
+  bool detected_ = false;
+  uint32_t lastStep_ = 0;
+  bool dirty_ = true;
+  void draw();
+};

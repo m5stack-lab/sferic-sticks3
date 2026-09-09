@@ -107,6 +107,14 @@ A `StreamTool` (`src/stream_hub.*`): `stream_start` / `stream_stop`.
 
 ---
 
+## `subghz.waterfall` — implemented (firmware: Waterfall)
+
+Display-only. Time-scrolling 433 MHz RSSI spectrogram — the `subghz.scan`
+sweep stacked as rows so bursts read as vertical streaks. No headless path
+(a live view, not a query). `A` cycles contrast, `B`-hold exits.
+
+---
+
 ## Planned (ADR-0001 — not yet built)
 
 - **TPMS / weather-station / doorbell** decoders on top of `subghz.decode`

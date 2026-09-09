@@ -62,3 +62,27 @@ class Nrf24SniffScreen : public Screen {
 bool nrf24SniffStreamStart(const std::string& params);
 void nrf24SniffStreamPoll(const StrikeEmit& emit);
 void nrf24SniffStreamStop();
+
+// 2.4GHz > Waterfall. Time-scrolling carrier-detect spectrogram: every
+// channel sampled a few times per row (nRF24 RPD), rows stacked so Wi-Fi /
+// BLE / hopping traffic shows as vertical bands. Display-only. A = clear,
+// B-hold = back.
+class Nrf24WaterfallScreen : public Screen {
+ public:
+  static constexpr int kChannels = 126;
+  static constexpr int kRows = 100;
+  static constexpr int kDwell = 3;  // RPD samples per channel per row
+
+  void onEnter() override;
+  void onExit() override;
+  void tick() override;
+
+ private:
+  uint8_t hist_[kRows][kChannels];  // 0..kDwell hits, newest at head_
+  uint8_t row_[kChannels];
+  int head_ = 0;
+  int ch_ = 0;
+  bool detected_ = false;
+  bool dirty_ = true;
+  void draw();
+};

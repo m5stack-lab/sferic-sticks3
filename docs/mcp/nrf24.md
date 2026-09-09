@@ -88,6 +88,15 @@ FIFO and streams one strike per frame. A `StreamTool` (`src/stream_hub.*`):
 
 ---
 
+## `nrf24.waterfall` — implemented (firmware: Waterfall)
+
+Display-only. Time-scrolling 2.4 GHz carrier-detect spectrogram — every
+channel RPD-sampled a few times per row, rows stacked so Wi-Fi / BLE /
+hopping traffic shows as vertical bands. No headless path. `A` clears,
+`B`-hold exits.
+
+---
+
 ## Planned (ADR-0001 — not yet built)
 
 ### `nrf24.hid_research` (Mousejack-style)

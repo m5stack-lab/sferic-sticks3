@@ -676,4 +676,114 @@ void subghzDecodeStreamStop() {
   rfpack::release();
 }
 
+// =========================================================== waterfall =====
+
+namespace {
+double wfBinHz(int i) {
+  return kBandLoHz +
+         (kBandHiHz - kBandLoHz) * i / (SubGhzWaterfallScreen::kBins - 1);
+}
+
+// dBm (~ -120..-40) → heat colour, `gain` steepens the low end.
+uint16_t heat(int dbm, uint8_t gain) {
+  int v = (dbm + 120) * gain;  // 0..~(80*gain)
+  if (v < 0) v = 0;
+  if (v > 100) v = 100;
+  if (v < 20) return rgb565(0, 0, 40 + v);          // near-black → blue
+  if (v < 45) return rgb565(0, (v - 20) * 8, 120);  // blue → cyan
+  if (v < 65) return rgb565((v - 45) * 10, 200, 120 - (v - 45) * 6);  // → green
+  if (v < 85) return rgb565(200 + (v - 65) * 2, 200 - (v - 65) * 4, 0);  // → yel
+  return rgb565(255, (100 - v) * 12, 0);            // → red
+}
+}  // namespace
+
+void SubGhzWaterfallScreen::onEnter() {
+  dirty_ = true;
+  head_ = 0;
+  bin_ = 0;
+  for (auto& r : hist_)
+    for (auto& c : r) c = -120;
+  for (auto& c : row_) c = -120;
+  detected_ =
+      rfpack::presence().cc1101 && rfpack::acquire(rfpack::Radio::SubGhz);
+  if (detected_) {
+    rfpack::cc1101Strobe(STROBE_SRES);
+    delay(5);
+  }
+}
+
+void SubGhzWaterfallScreen::onExit() {
+  if (detected_) {
+    rfpack::cc1101Strobe(STROBE_SIDLE);
+    rfpack::release();
+  }
+}
+
+void SubGhzWaterfallScreen::tick() {
+  const BtnEvent a = hal.event(Btn::A);
+  const BtnEvent b = hal.event(Btn::B);
+  if (b == BtnEvent::Hold) {
+    pop();
+    return;
+  }
+  if (a == BtnEvent::Click) {
+    gain_ = gain_ >= 3 ? 1 : gain_ + 1;
+    dirty_ = true;
+  }
+
+  const uint32_t now = hal.nowMs();
+  if (detected_ && now - lastStep_ > 20) {
+    lastStep_ = now;
+    tuneHz(wfBinHz(bin_));
+    delayMicroseconds(400);
+    row_[bin_] = readRssiDbm();
+    if (++bin_ >= kBins) {
+      bin_ = 0;
+      head_ = (head_ + 1) % kRows;
+      for (int i = 0; i < kBins; ++i) hist_[head_][i] = row_[i];
+      dirty_ = true;
+    }
+  }
+
+  if (dirty_) {
+    draw();
+    dirty_ = false;
+  }
+}
+
+void SubGhzWaterfallScreen::draw() {
+  const Theme& th = theme();
+  auto& g = hal.gfx();
+  kit::begin("433 Waterfall", toolsetAccent("subghz"));
+
+  if (!detected_) {
+    kit::headline("NO RADIO", th.bad);
+    kit::line(0, rfpack::present() ? "CC1101 busy" : "RF Pack not detected",
+              th.fgDim);
+    kit::end("B- back");
+    return;
+  }
+
+  const int bw = kit::W / kBins;
+  const int rh = kit::BODY_H / kRows > 0 ? kit::BODY_H / kRows : 1;
+  g.startWrite();
+  for (int age = 0; age < kRows; ++age) {
+    const int hr = (head_ - age + kRows * 4) % kRows;
+    const int y = kit::BODY_Y + kit::BODY_H - (age + 1) * rh;
+    if (y < kit::BODY_Y) break;
+    for (int x = 0; x < kBins; ++x)
+      g.fillRect(x * bw, y, bw, rh, heat(hist_[hr][x], gain_));
+  }
+  g.endWrite();
+
+  char l[24];
+  std::snprintf(l, sizeof(l), "433.1-434.8  x%u", gain_);
+  g.setTextSize(1);
+  g.setTextColor(th.fg, th.bg);
+  g.setCursor(4, kit::BODY_Y + 1);
+  g.print(l);
+
+  kit::end("A contrast   B- back");
+}
+
 #endif  // SFERIC_RF_PACK
