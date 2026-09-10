@@ -47,7 +47,8 @@ class Nrf24SniffScreen : public Screen {
 
  private:
   uint8_t ch_ = 2;
-  uint32_t frames_ = 0;
+  uint32_t frames_ = 0;   // plausible frames surfaced
+  uint32_t noise_ = 0;    // FIFO entries rejected by the plausibility gate
   uint8_t last_[32] = {0};
   uint8_t lastLen_ = 0;
   bool detected_ = false;

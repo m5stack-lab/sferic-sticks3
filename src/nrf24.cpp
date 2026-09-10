@@ -107,12 +107,65 @@ void sniffDown() {
   rfpack::nrf24WriteReg(REG_CONFIG, 0x00);
 }
 
-// Drain one frame if the FIFO has one. Returns payload length (SNIFF_PW) or 0.
-uint8_t sniffNext(uint8_t* buf) {
-  if (rfpack::nrf24ReadReg(REG_FIFO_STATUS) & 0x01) return 0;  // RX_EMPTY
-  rfpack::nrf24ReadPayload(buf, SNIFF_PW);
-  rfpack::nrf24WriteReg(REG_STATUS, 0x40);  // clear RX_DR
-  return SNIFF_PW;
+// A promiscuous no-CRC capture fills the FIFO with high-entropy garbage at
+// ~240/s. The one thing that separates a real packet from noise without a
+// CRC: real devices *retransmit*, so a genuine frame's leading bytes recur;
+// random noise (2^40 space over 2 bytes of address + type) never collides.
+// Surface a frame only once its 5-byte prefix has been seen before. First
+// hit of a real frame is dropped; the retransmit(s) come through.
+uint8_t g_prefixRing[48][5];
+uint8_t g_prefixHead = 0;
+uint32_t g_prefixCount = 0;
+
+void sniffRingReset() {
+  g_prefixHead = 0;
+  g_prefixCount = 0;
+  memset(g_prefixRing, 0, sizeof(g_prefixRing));
+}
+
+bool sniffCorroborated(const uint8_t* b) {
+  const int have = g_prefixCount < 48 ? (int)g_prefixCount : 48;
+  bool match = false;
+  for (int i = 0; i < have; ++i)
+    if (memcmp(g_prefixRing[i], b, 5) == 0) {
+      match = true;
+      break;
+    }
+  memcpy(g_prefixRing[g_prefixHead], b, 5);
+  g_prefixHead = (g_prefixHead + 1) % 48;
+  ++g_prefixCount;
+  return match;
+}
+
+// Drain FIFO entries until a corroborated frame turns up (buf filled,
+// returns SNIFF_PW) or the FIFO empties / a drain cap is hit (returns 0).
+// Uncorroborated frames are consumed and counted in *rejected.
+// Reject the degenerate frames the addressless receiver latches on Wi-Fi /
+// BLE preamble energy: nearly all 0x55 / 0xAA, i.e. very few distinct bytes.
+bool sniffEntropyOk(const uint8_t* b, uint8_t n) {
+  bool seen[256] = {false};
+  int distinct = 0;
+  for (uint8_t i = 0; i < n; ++i)
+    if (!seen[b[i]]) {
+      seen[b[i]] = true;
+      if (++distinct >= 10) return true;
+    }
+  return false;
+}
+
+uint8_t sniffNext(uint8_t* buf, uint32_t* rejected = nullptr) {
+  for (int drained = 0; drained < 32; ++drained) {
+    if (rfpack::nrf24ReadReg(REG_FIFO_STATUS) & 0x01) return 0;  // RX_EMPTY
+    rfpack::nrf24ReadPayload(buf, SNIFF_PW);
+    rfpack::nrf24WriteReg(REG_STATUS, 0x40);  // clear RX_DR
+    // Real packet: structured (entropy) AND retransmitted (prefix recurs).
+    // Random FIFO noise fails corroboration; preamble-lock frames fail
+    // entropy.
+    if (sniffEntropyOk(buf, SNIFF_PW) && sniffCorroborated(buf))
+      return SNIFF_PW;
+    if (rejected) ++*rejected;
+  }
+  return 0;
 }
 
 void b64(const uint8_t* in, size_t n, char* out) {
@@ -272,7 +325,10 @@ void Nrf24SniffScreen::onEnter() {
   lastLen_ = 0;
   detected_ =
       rfpack::presence().nrf24 && rfpack::acquire(rfpack::Radio::Nrf24);
-  if (detected_) sniffUp(ch_);
+  if (detected_) {
+    sniffRingReset();
+    sniffUp(ch_);
+  }
 }
 
 void Nrf24SniffScreen::onExit() {
@@ -291,6 +347,8 @@ void Nrf24SniffScreen::tick() {
   }
   if (a == BtnEvent::Click && detected_) {
     ch_ = (ch_ + 1) % 126;
+    frames_ = noise_ = 0;
+    sniffRingReset();
     sniffUp(ch_);
     dirty_ = true;
   }
@@ -298,7 +356,7 @@ void Nrf24SniffScreen::tick() {
   if (detected_) {
     uint8_t buf[32];
     for (int i = 0; i < 8; ++i) {
-      const uint8_t len = sniffNext(buf);
+      const uint8_t len = sniffNext(buf, &noise_);
       if (!len) break;
       memcpy(last_, buf, len);
       lastLen_ = len;
@@ -334,7 +392,8 @@ void Nrf24SniffScreen::draw() {
   char l[40];
   std::snprintf(l, sizeof(l), "%lu MHz", (unsigned long)(2400 + ch_));
   kit::headline(l, frames_ ? th.ok : th.fgDim);
-  std::snprintf(l, sizeof(l), "frames %lu", (unsigned long)frames_);
+  std::snprintf(l, sizeof(l), "sig %lu   noise %lu", (unsigned long)frames_,
+                (unsigned long)noise_);
   kit::line(0, l);
 
   g.setTextSize(1);
@@ -361,6 +420,7 @@ bool nrf24SniffStreamStart(const std::string& params) {
   if (deserializeJson(p, params) == DeserializationError::Ok &&
       p["ch"].is<uint8_t>())
     ch = p["ch"];
+  sniffRingReset();
   sniffUp(ch);
   return true;
 }

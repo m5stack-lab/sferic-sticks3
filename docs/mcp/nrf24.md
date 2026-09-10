@@ -79,6 +79,16 @@ FIFO and streams one strike per frame. A `StreamTool` (`src/stream_hub.*`):
 > `payload.decoded`, so the raw bytes land at `payload.decoded.raw` rather
 > than `payload.raw`. Cosmetic; revisit if the envelope grows a raw slot.
 
+**Noise gate.** With CRC off there's nothing to validate a frame, so the
+FIFO fills with ~240/s of garbage. Two cheap filters, both must pass:
+*entropy* (≥10 distinct byte values — drops the frames the addressless
+receiver latches on Wi-Fi/BLE preamble energy, which are nearly all
+`0x55`/`0xAA`) and *corroboration* (the 5-byte prefix must have already been
+seen — random noise never recurs; a retransmitted real packet does; the
+first copy is dropped). Measured: ~950/4s raw → 0/4s on quiet channels,
+~50/4s worst case in the Wi-Fi band. Still **UNVERIFIED against a real
+target** — tune against your own dongle (§1c of `docs/rf-pack-roadmap.md`).
+
 > **UNVERIFIED:** the promiscuous config (illegal 2-byte `SETUP_AW`, no CRC)
 > is the well-known Goodspeed / Mousejack approach but is not yet
 > bench-confirmed on the RF Pack S3 — expect a high false-frame rate and

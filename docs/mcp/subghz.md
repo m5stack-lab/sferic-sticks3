@@ -107,6 +107,30 @@ A `StreamTool` (`src/stream_hub.*`): `stream_start` / `stream_stop`.
 
 ---
 
+## `subghz.foxhunt` — implemented (firmware: Fox Hunt)
+
+Live RSSI meter on one fixed frequency, for walking down a transmitter.
+
+**Params**
+
+| name | type | default | notes |
+|---|---|---|---|
+| `station` | string | — | required |
+| `mhz` | float | `433.92` | carrier |
+| `ms` | int | `3000` | sample window |
+
+**Returns**
+
+```json
+{ "mhz": 433.92, "samples": 987,
+  "rssi": { "now": -110, "min": -115, "max": -104, "mean": -109 } }
+```
+
+On-device: big dBm number + rolling graph + peak-hold; `A` cycles a preset
+(433.92 / 315 / 868.35 / 915 / 433.42). Errors: `radio_absent`, `radio_busy`.
+
+---
+
 ## `subghz.waterfall` — implemented (firmware: Waterfall)
 
 Display-only. Time-scrolling 433 MHz RSSI spectrogram — the `subghz.scan`

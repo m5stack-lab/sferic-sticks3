@@ -676,6 +676,146 @@ void subghzDecodeStreamStop() {
   rfpack::release();
 }
 
+// ============================================================ fox hunt =====
+
+namespace {
+constexpr double kFoxPresets[] = {433.92, 315.0, 868.35, 915.0, 433.42};
+constexpr int kFoxN = sizeof(kFoxPresets) / sizeof(kFoxPresets[0]);
+}  // namespace
+
+void SubGhzFoxhuntScreen::onEnter() {
+  dirty_ = true;
+  cur_ = peak_ = -120;
+  head_ = 0;
+  for (auto& v : hist_) v = -120;
+  detected_ =
+      rfpack::presence().cc1101 && rfpack::acquire(rfpack::Radio::SubGhz);
+  if (detected_) {
+    rfpack::cc1101Strobe(STROBE_SRES);
+    delay(5);
+    tuneHz(kFoxPresets[preset_] * 1e6);
+  }
+}
+
+void SubGhzFoxhuntScreen::onExit() {
+  if (detected_) {
+    rfpack::cc1101Strobe(STROBE_SIDLE);
+    rfpack::release();
+  }
+}
+
+void SubGhzFoxhuntScreen::tick() {
+  const BtnEvent a = hal.event(Btn::A);
+  const BtnEvent b = hal.event(Btn::B);
+  if (b == BtnEvent::Hold) {
+    pop();
+    return;
+  }
+  if (a == BtnEvent::Click && detected_) {
+    preset_ = (preset_ + 1) % kFoxN;
+    cur_ = peak_ = -120;
+    for (auto& v : hist_) v = -120;
+    tuneHz(kFoxPresets[preset_] * 1e6);
+    dirty_ = true;
+  }
+
+  const uint32_t now = hal.nowMs();
+  if (detected_ && now - lastSample_ >= 15) {
+    lastSample_ = now;
+    cur_ = readRssiDbm();
+    hist_[head_] = cur_;
+    head_ = (head_ + 1) % kGraph;
+    if (cur_ > peak_) peak_ = cur_;
+    dirty_ = true;
+  }
+
+  if (now - lastDraw_ > 70 && dirty_) {
+    draw();
+    dirty_ = false;
+    lastDraw_ = now;
+  }
+}
+
+void SubGhzFoxhuntScreen::draw() {
+  const Theme& th = theme();
+  auto& g = hal.gfx();
+  char t[28];
+  std::snprintf(t, sizeof(t), "Fox Hunt  %.2f", kFoxPresets[preset_]);
+  kit::begin(t, toolsetAccent("subghz"));
+
+  if (!detected_) {
+    kit::headline("NO RADIO", th.bad);
+    kit::line(0, rfpack::present() ? "CC1101 busy" : "RF Pack not detected",
+              th.fgDim);
+    kit::end("B- back");
+    return;
+  }
+
+  char l[24];
+  std::snprintf(l, sizeof(l), "%d dBm", cur_);
+  const uint16_t c = cur_ > -55 ? th.bad : cur_ > -80 ? th.warn : th.fgDim;
+  kit::bigValue(l, c);
+
+  const int gx = 4, gw = kGraph;
+  const int gy = kit::BODY_Y + 44;
+  const int gh = kit::BODY_H - 52;
+  g.drawRect(gx, gy, gw + 2, gh, th.line);
+  for (int x = 0; x < gw; ++x) {
+    const int v = hist_[(head_ + x) % kGraph];  // oldest → newest, L → R
+    int hh = (v + 110) * gh / 70;
+    if (hh < 0) hh = 0;
+    if (hh > gh - 2) hh = gh - 2;
+    if (hh > 0)
+      g.drawFastVLine(gx + 1 + x, gy + gh - 1 - hh, hh, toolsetAccent("subghz"));
+  }
+  std::snprintf(l, sizeof(l), "peak %d", peak_);
+  g.setTextSize(1);
+  g.setTextColor(th.fgDim, th.bg);
+  g.setCursor(gx + gw - 46, gy + 2);
+  g.print(l);
+
+  kit::end("A freq   B- back");
+}
+
+std::string subghzFoxhuntJson(const std::string& params) {
+  if (!rfpack::presence().cc1101) return R"({"error":"radio_absent"})";
+  if (!rfpack::acquire(rfpack::Radio::SubGhz))
+    return R"({"error":"radio_busy"})";
+
+  const uint32_t budget = paramMs(params, 3000, 300, 15000);
+  const double mhz = paramMhz(params);
+  rfpack::cc1101Strobe(STROBE_SRES);
+  delay(5);
+  tuneHz(mhz * 1e6);
+  delayMicroseconds(600);
+
+  int now = -120, lo = 0, hi = -120;
+  long sum = 0;
+  uint32_t n = 0;
+  const uint32_t start = millis();
+  while (millis() - start < budget) {
+    now = readRssiDbm();
+    if (now < lo) lo = now;
+    if (now > hi) hi = now;
+    sum += now;
+    ++n;
+    delayMicroseconds(1500);
+  }
+  rfpack::cc1101Strobe(STROBE_SIDLE);
+  rfpack::release();
+
+  JsonDocument d;
+  d["mhz"] = mhz;
+  d["samples"] = n;
+  d["rssi"]["now"] = now;
+  d["rssi"]["min"] = n ? lo : 0;
+  d["rssi"]["max"] = hi;
+  d["rssi"]["mean"] = n ? (int)(sum / (long)n) : 0;
+  std::string out;
+  serializeJson(d, out);
+  return out;
+}
+
 // =========================================================== waterfall =====
 
 namespace {

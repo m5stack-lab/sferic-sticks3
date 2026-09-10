@@ -93,15 +93,27 @@ mouse/keyboard dongle (Logitech Unifying is 2.4 GHz GFSK), an RC controller.
 ### Shipped
 
 `subghz.scan` · `subghz.capture` · `subghz.replay` · `subghz.decode`
-(PT2262/EV1527) · `subghz.waterfall` · `nrf24.scan` · `nrf24.sniff` ·
-`nrf24.waterfall`
+(PT2262/EV1527) · `subghz.foxhunt` · `subghz.waterfall` · `nrf24.scan` ·
+`nrf24.sniff` (entropy+corroboration noise gate) · `nrf24.waterfall`
 
-### Next — cheap once §1 is green (same files, verified base)
+### Bench-pass results (2026-09-09)
+
+- **§1a CC1101 OOK RX** — 4/4 `subghz.capture` timeouts. No transmitter was
+  confirmed present; if a 433 fob *was* pressed, the RX config needs the
+  tuning below. Scan RSSI floor is healthy, so SPI/synth/RSSI are fine —
+  the gap is the async demod on GDO0 (or the wrong band).
+- **§1b CC1101 TX** — `emit_fire` runs (`sent:true`); radiation unconfirmed
+  (no SDR on hand).
+- **§1c nRF24 sniff** — raw ~240/s FIFO noise. Added the entropy +
+  corroboration gate → 0/s on quiet channels, ~13/s worst case in the
+  Wi-Fi band. Still needs a real target to confirm it catches structured
+  frames cleanly.
+
+### Next — cheap once §1a is green
 
 | Tool | Toolset | Notes |
 |---|---|---|
 | `subghz.decode` protocol packs | subghz | TPMS, weather (Acurite/LaCrosse/Oregon), doorbell/PIR. rtl_433 is the reference. Passive RX. Wants native unit tests with captured sample timings. |
-| `subghz.foxhunt` | subghz | Big RSSI number + trend on one fixed freq for walking down a transmitter. |
 | `subghz.testgen` | subghz | Emit a known OOK pattern to validate your own receiver. |
 | `nrf24.analyzer` | nrf24 | Per-channel dwell + packet-rate histogram → fingerprint a hopping device's channel set. |
 | `nrf24.replay` | nrf24 | Capture with sniff, retransmit (your own gear). Symmetric with `subghz.replay`. |

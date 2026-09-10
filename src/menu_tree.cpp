@@ -222,6 +222,10 @@ void registerBuiltinTools() {
   registry.add({"subghz.waterfall", "Waterfall", "subghz",
                 "Time-scrolling 433 MHz RSSI spectrogram",
                 [] { return static_cast<Screen*>(new SubGhzWaterfallScreen()); }});
+  registry.add({"subghz.foxhunt", "Fox Hunt", "subghz",
+                "Live RSSI meter on one frequency — walk down a transmitter",
+                [] { return static_cast<Screen*>(new SubGhzFoxhuntScreen()); },
+                [](const std::string& p) { return subghzFoxhuntJson(p); }});
   registry.add({"nrf24.scan", "Band Scan", "nrf24",
                 "2.4 GHz carrier-detect sweep (nRF24 RPD)",
                 [] { return static_cast<Screen*>(new Nrf24ScanScreen()); },

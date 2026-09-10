@@ -109,6 +109,37 @@ bool subghzDecodeStreamStart(const std::string& params);
 void subghzDecodeStreamPoll(const StrikeEmit& emit);
 void subghzDecodeStreamStop();
 
+// ---------------------------------------------------------- fox hunt -------
+
+// SubGHz > Fox Hunt. Live RSSI meter on one fixed frequency for walking down
+// a transmitter — big dBm number, rolling graph, peak-hold. A cycles a
+// frequency preset (433.92 / 315 / 868.35 / 915 / 433.42), B-hold exits.
+class SubGhzFoxhuntScreen : public Screen {
+ public:
+  static constexpr int kGraph = 116;
+
+  void onEnter() override;
+  void onExit() override;
+  void tick() override;
+
+ private:
+  int8_t hist_[kGraph];
+  int head_ = 0;
+  int8_t cur_ = -120;
+  int8_t peak_ = -120;
+  uint8_t preset_ = 0;
+  bool detected_ = false;
+  uint32_t lastSample_ = 0;
+  uint32_t lastDraw_ = 0;
+  bool dirty_ = true;
+  void draw();
+};
+
+// Headless one-shot (docs/mcp/subghz.md): sample RSSI on {mhz?} (default
+// 433.92) for {ms?} (default 3000). Returns
+// {mhz, samples, rssi:{now,min,max,mean}}. radio_absent / radio_busy on error.
+std::string subghzFoxhuntJson(const std::string& params);
+
 // ---------------------------------------------------------- waterfall -------
 
 // SubGHz > Waterfall. Time-scrolling 433 MHz RSSI spectrogram — the same
