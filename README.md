@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.svg" alt="sferic-sticks3: StickS3 RF multitool: a lightning-detection sensor network" width="100%"></p>
+
 # sferic
 
 MIT-licensed ESP32-S3 hardware / radio multitool firmware for the **M5Stack
@@ -165,3 +167,8 @@ Firmware co-authored with [Claude Code](https://claude.com/claude-code)
 ## License
 
 [MIT](LICENSE) © 2026 ry-ops
+
+<!-- org-footer -->
+---
+
+<p align="center"><sub>Part of <a href="https://github.com/m5stack-lab">m5stack-lab</a> · unofficial M5Stack projects, not affiliated with M5Stack · built by <a href="https://github.com/ry-ops">ry-ops</a></sub></p>
