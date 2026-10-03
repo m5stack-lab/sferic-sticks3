@@ -12,7 +12,7 @@ ADR-0001 (authorized-use scope — binds the new toolsets), ADR-0004
 
 ## Context
 
-The StickS3 firmware (`ry-ops/sferic-sticks3`) is proven: onboard tool
+The StickS3 firmware (`m5stack-lab/sferic-sticks3`) is proven: onboard tool
 catalog complete, serial + WebSocket station transports, driven end-to-end
 from the collector over a real wireless link (2026-09-03). The
 board-agnostic seams held — `registry`, `dispatch` / `link`, the strike
@@ -53,7 +53,7 @@ scoped.
 
 ## Decision
 
-### 1. New repo `ry-ops/sferic-tab5`; copy shared files, defer a library
+### 1. New repo `m5stack-lab/sferic-tab5`; copy shared files, defer a library
 
 The Tab5 firmware is its own repo. It **copies** the board-agnostic sources
 from `sferic-sticks3` (`ui_kit`, `theme`, `icons`, `registry`, `tool`,
@@ -177,7 +177,7 @@ becomes optional.
   plug into a proven seam.
 - `ui_kit` gains a board-profile metrics seam (§4); **no tool `draw()`
   changes** on either board.
-- `ry-ops/sferic-tab5` is created by copying the shared sources; a
+- `m5stack-lab/sferic-tab5` is created by copying the shared sources; a
   `sferic-core` extraction is a future ADR.
 - New `docs/mcp/{camera,thread,usbhost,canbus}.md` living specs, one per new
   toolset, written alongside the code.

@@ -95,7 +95,7 @@ A tethered station also answers a headless command channel over USB serial —
 `>{"op":"..."}` lines in, `<{...}` lines out, coexisting with log output.
 `hello` (capability declaration), `status`, `tools`, `run` (same
 `Registry::run` dispatch), `set`. This is the milestone-2 transport for
-[`ry-ops/sferic-collector`](https://github.com/ry-ops/sferic-collector); over
+[`m5stack-lab/sferic-collector`](https://github.com/m5stack-lab/sferic-collector); over
 serial the radio is free, so every toolset is reachable once it has a
 headless path. ([`docs/mcp/serial-transport.md`](docs/mcp/serial-transport.md))
 
@@ -140,7 +140,7 @@ RF Pack S3 drivers (SubGHz / nRF24 — waiting on hardware).
 
 Versioned by `SFERIC_VERSION` in `src/version.h`. Pushing a `vX.Y.Z` tag on
 `main` runs CI for both envs and publishes a [GitHub
-Release](https://github.com/ry-ops/sferic-sticks3/releases) with `sferic-<tag>.bin`
+Release](https://github.com/m5stack-lab/sferic-sticks3/releases) with `sferic-<tag>.bin`
 (default USB-Serial/JTAG build) and `sferic-usbhid-<tag>.bin` (TinyUSB
 HID build) attached, plus auto-generated notes.
 

@@ -83,9 +83,9 @@ sferic flash <id>        inspect / export a flash
 
 | Repo | Contents |
 |---|---|
-| `ry-ops/sferic-sticks3` | this firmware (renamed from `ry-ops/sferic`) |
-| `ry-ops/sferic-collector` | the companion MCP server / collector (ADR-0003) |
-| `ry-ops/sferic-<device>` | future per-device firmware (Cardputer, Tab5, …) |
+| `m5stack-lab/sferic-sticks3` | this firmware (renamed from `ry-ops/sferic`) |
+| `m5stack-lab/sferic-collector` | the companion MCP server / collector (ADR-0003) |
+| `m5stack-lab/sferic-<device>` | future per-device firmware (Cardputer, Tab5, …) |
 
 A dedicated `sferic` GitHub org is planned; the repos move there then. The
 `sferic` *name*, vocabulary, and CLI surface above are unchanged.
